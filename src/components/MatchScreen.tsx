@@ -186,7 +186,9 @@ export function MatchScreen({
         <LazyBoardCanvas
           state={state}
           focusedMove={focusedMove}
+          goalPlayer={humanColor}
           distanceHints={distanceHints}
+          showBallMovePreview={difficulty === "easy"}
           interactive={humanTurn && !aiThinking}
           canSelect={(move) => humanTurn && !aiThinking && getLegalMove(state, move) !== null}
           onHover={(move) => setFocusedMove(move)}

@@ -31,9 +31,6 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
   const [completed, setCompleted] = useState(false);
   const [completionPreview, setCompletionPreview] = useState<MovePreview | null>(null);
 
-  const livePreview = previewMove(state, lesson.target);
-  const displayedPreview = completionPreview ?? livePreview;
-
   function handleSelect(move: Move): void {
     if (completed) return;
     const movePreview = previewMove(state, move);
@@ -60,7 +57,10 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
   }
 
   const boardFocus = lesson.showDistances ? lesson.target : focusedMove;
-  const currentDistances = displayedPreview?.before ?? getDirectionalExitDistances(state);
+  const tutorialDistances =
+    completed && completionPreview
+      ? completionPreview.afterPlacement
+      : getDirectionalExitDistances(state);
 
   return (
     <main id="main-content" className="game-layout tutorial-layout" tabIndex={-1}>
@@ -69,11 +69,12 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
           state={state}
           focusedMove={boardFocus}
           tutorialTarget={lesson.target}
+          goalPlayer={lesson.initialState.turn}
           distanceHints={
-            lesson.showDistances && displayedPreview
+            lesson.showDistances
               ? {
-                  current: currentDistances,
-                  after: displayedPreview.afterPlacement,
+                  current: tutorialDistances,
+                  after: null,
                 }
               : null
           }

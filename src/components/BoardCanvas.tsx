@@ -6,6 +6,7 @@ import {
   type DirectionalDistances,
   type GameState,
   type Move,
+  type Player,
 } from "../game";
 import {
   BOARD_CANVAS_SIZE,
@@ -23,8 +24,10 @@ export interface BoardCanvasProps {
   state: GameState;
   focusedMove: Move | null;
   tutorialTarget?: Move | null;
+  goalPlayer?: Player;
   distanceHints?: BoardDistanceHints | null;
   highlightShortestDistances?: boolean;
+  showBallMovePreview?: boolean;
   interactive: boolean;
   canSelect?: (move: Move) => boolean;
   onHover: (move: Move | null) => void;
@@ -50,8 +53,10 @@ export function BoardCanvas({
   state,
   focusedMove,
   tutorialTarget = null,
+  goalPlayer = state.turn,
   distanceHints = null,
   highlightShortestDistances = false,
+  showBallMovePreview = false,
   interactive,
   canSelect,
   onHover,
@@ -118,12 +123,39 @@ export function BoardCanvas({
       preview: movePreview,
       focusedMove: activeFocus,
       tutorialTarget,
+      goalPlayer,
+      showBallMovePreview,
       interactive,
       dark,
       canSelect: selectable,
     };
     sceneRef.current?.setView(view);
-  }, [activeFocus, dark, interactive, movePreview, selectable, state, tutorialTarget]);
+  }, [
+    activeFocus,
+    dark,
+    goalPlayer,
+    interactive,
+    movePreview,
+    selectable,
+    showBallMovePreview,
+    state,
+    tutorialTarget,
+  ]);
+
+  const goalDescription =
+    goalPlayer === "white" ? "玩家目标为左右边界" : "玩家目标为上下边界";
+  const movementDescription =
+    showBallMovePreview && movePreview?.ballWillMove
+      ? `。确认后球将向${
+          movePreview.ballWillMove === "up"
+            ? "上"
+            : movePreview.ballWillMove === "right"
+              ? "右"
+              : movePreview.ballWillMove === "down"
+                ? "下"
+                : "左"
+        }移动一格`
+      : "";
 
   function handleKeyboard(event: KeyboardEvent<HTMLDivElement>): void {
     if (!interactive) {
@@ -160,8 +192,8 @@ export function BoardCanvas({
       tabIndex={interactive ? 0 : -1}
       aria-label={
         interactive
-          ? `Escape 棋盘。当前${state.turn === "white" ? "白方目标为左右边界" : "黑方目标为上下边界"}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列。`
-          : `Escape 棋盘。当前${state.turn === "white" ? "白方目标为左右边界" : "黑方目标为上下边界"}。`
+          ? `Escape 棋盘。${goalDescription}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列${movementDescription}。`
+          : `Escape 棋盘。${goalDescription}。`
       }
       onKeyDown={handleKeyboard}
       onBlur={() => setKeyboardFocus(null)}

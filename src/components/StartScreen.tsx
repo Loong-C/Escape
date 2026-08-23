@@ -45,7 +45,7 @@ export function StartScreen({
           <p className="option-note">
             {difficulty === "easy"
               ? "显示棋盘外的四边距离提示。"
-              : "不显示距离提示，AI 思考时间更长。"}
+              : "不显示距离与移动预览，AI 强度与简易模式相同。"}
           </p>
         </section>
 
