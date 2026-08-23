@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "train:ai": "tsx scripts/train-ai.ts",
     "expand:ai": "tsx scripts/expand-ai-model.ts",
-    "benchmark:ai": "tsx scripts/benchmark-ai.ts"
+    "benchmark:ai": "tsx scripts/benchmark-ai.ts",
+    "profile:ai": "tsx scripts/profile-ai.ts"
   },
   "dependencies": {
     "@fontsource-variable/space-grotesk": "^5.3.0",
