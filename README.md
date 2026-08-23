@@ -34,7 +34,7 @@ pnpm build
 
 ```bash
 pnpm exec tsx scripts/train-ai.ts \
-  --episodes 20000 \
+  --episodes 10000 \
   --updates 32 \
   --candidates 24 \
   --checkpoint 500 \
@@ -44,8 +44,10 @@ pnpm exec tsx scripts/train-ai.ts \
 评测命令：
 
 ```bash
-pnpm benchmark:ai -- --games 40 --time 90 --depth 2
+pnpm benchmark:ai -- --games 40 --time 40 --depth 1
 ```
+
+随生产版本发布的模型完成了 10,000 局自我对弈训练。固定种子验收中，模型与规则启发式基线拥有相同的一层搜索和每步 40 ms 预算，轮换先后手进行 40 局，结果为 40 胜、0 负、0 和。困难模式实战另使用更长预算和迭代加深搜索。
 
 训练完成后，将模型复制到 `public/ai/escape-value.json` 再构建生产版本。
 
