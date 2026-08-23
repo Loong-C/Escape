@@ -22,6 +22,7 @@ interface TrainingOptions {
   candidateLimit: number;
   replaySize: number;
   updatesPerEpisode: number;
+  fullPolicyRate: number;
   fixedSize: number;
   checkpointEvery: number;
   checkpointDir: string;
@@ -57,6 +58,7 @@ const options: TrainingOptions = {
   candidateLimit: numberArgument("candidates", 36),
   replaySize: numberArgument("replay", 120_000),
   updatesPerEpisode: numberArgument("updates", 56),
+  fullPolicyRate: numberArgument("full-policy-rate", 0.25),
   fixedSize: numberArgument("size", 0),
   checkpointEvery: numberArgument("checkpoint", 1_000),
   checkpointDir: stringArgument("checkpoint-dir", ""),
@@ -143,6 +145,8 @@ async function writeModel(episodes: number): Promise<void> {
       .join(","),
     continuedFromEpisodes: previousEpisodes,
     additionalEpisodes: episodes - previousEpisodes,
+    fullPolicyRate: options.fullPolicyRate,
+    representation: `${network.inputSize} features including a perspective-canonical 7x7 raw local post window and board-validity mask`,
   };
   const payload = `${JSON.stringify(network.serialize(metadata), null, 2)}\n`;
   await mkdir(dirname(options.output), { recursive: true });
@@ -184,6 +188,7 @@ for (let episode = 1; episode <= options.episodes; episode += 1) {
       candidateLimit: options.candidateLimit,
       epsilon,
       temperature,
+      fullPolicyRate: options.fullPolicyRate,
     });
     state = choice.state;
   }

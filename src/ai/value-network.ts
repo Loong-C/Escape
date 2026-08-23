@@ -16,6 +16,9 @@ export interface TrainingMetadata {
   boardCounts?: string;
   continuedFromEpisodes?: number;
   additionalEpisodes?: number;
+  fullPolicyRate?: number;
+  representation?: string;
+  expandedFromFeatures?: number;
   selectionBenchmark?: Record<string, number | string>;
   benchmark?: Record<string, number | string>;
 }

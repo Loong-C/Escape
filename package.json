@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "train:ai": "tsx scripts/train-ai.ts",
+    "expand:ai": "tsx scripts/expand-ai-model.ts",
     "benchmark:ai": "tsx scripts/benchmark-ai.ts"
   },
   "dependencies": {

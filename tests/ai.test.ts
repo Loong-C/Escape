@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   SeededRandom,
   ValueNetwork,
+  FEATURE_NAMES,
   chooseMoveWithSearch,
   extractFeatures,
   sampleCandidates,
@@ -29,7 +30,8 @@ describe("AI foundation", () => {
   it("extracts a finite, stable feature vector", () => {
     const state = createGame();
     const features = extractFeatures(state, "white");
-    expect(features).toHaveLength(30);
+    expect(features).toHaveLength(FEATURE_NAMES.length);
+    expect(features).toHaveLength(128);
     expect(features.every(Number.isFinite)).toBe(true);
   });
 
@@ -96,7 +98,7 @@ describe("AI foundation", () => {
       support: [5, 4],
       opponentPosts: [[5, 6], [6, 5], [6, 6]],
     },
-  ])("occupies and anchors an immediate enclosure point at $missing", (scenario) => {
+  ])("finds an exact response to the enclosure threat at $missing", (scenario) => {
     const entries: Array<[number, number, Player]> = [
       ...scenario.opponentPosts.map(
         ([row, col]) => [row, col, "black"] as [number, number, Player],
@@ -112,10 +114,13 @@ describe("AI foundation", () => {
       seed: 17,
     });
 
-    expect(result.move).toMatchObject({
-      row: scenario.missing[0],
-      col: scenario.missing[1],
+    const afterDefense = applyMove(state, result.move);
+    const opponentCanWinImmediately = listLegalMoves(afterDefense).some((move) => {
+      const reply = applyMove(afterDefense, move);
+      return reply.outcome.status === "won" && reply.outcome.winner === "black";
     });
+
+    expect(opponentCanWinImmediately).toBe(false);
   });
 
   it("keeps the exact enclosure defense in easy mode", () => {
@@ -128,6 +133,8 @@ describe("AI foundation", () => {
     const model = new ValueNetwork(12, new SeededRandom(19));
     const result = chooseMoveWithSearch(state, model, {
       difficulty: "easy",
+      timeBudgetMs: 250,
+      maxDepth: 1,
       seed: 23,
     });
 
@@ -138,5 +145,22 @@ describe("AI foundation", () => {
     });
 
     expect(opponentCanWinImmediately).toBe(false);
+  });
+
+  it("uses the same search policy for both display difficulties", () => {
+    const state = createGame(3);
+    const model = new ValueNetwork(12, new SeededRandom(29));
+    const common = { timeBudgetMs: 100, maxDepth: 1, seed: 31 };
+    const easy = chooseMoveWithSearch(state, model, {
+      ...common,
+      difficulty: "easy",
+    });
+    const hard = chooseMoveWithSearch(state, model, {
+      ...common,
+      difficulty: "hard",
+    });
+
+    expect(easy.move).toEqual(hard.move);
+    expect(easy.score).toBe(hard.score);
   });
 });

@@ -1,5 +1,6 @@
 import {
   applyMove,
+  getLegalMove,
   listLegalMoves,
   otherPlayer,
   type GameState,
@@ -105,21 +106,22 @@ function forcedDefensiveResponses(
   const threats = immediateWinningMoves(opponentThreatState);
   if (threats.length === 0) return [];
 
-  const relevant = ranked.filter((entry) => {
-    if (entry.state.outcome.status !== "playing") return true;
-    const ballMoved =
-      entry.state.ball.row !== state.ball.row || entry.state.ball.col !== state.ball.col;
-    const affectsThreat = threats.some(
-      (threat) =>
-        Math.abs(entry.move.row - threat.row) + Math.abs(entry.move.col - threat.col) <= 1,
-    );
-    return ballMoved || affectsThreat;
-  });
-
-  return relevant.filter((entry) => {
+  const candidatesBlockingKnownWins = ranked.filter((entry) => {
     if (entry.state.outcome.status === "won") {
       return entry.state.outcome.winner === state.turn;
     }
+    return threats.every((threat) => {
+      if (!getLegalMove(entry.state, threat)) return true;
+      const reply = applyMove(entry.state, threat);
+      return !(
+        reply.outcome.status === "won" &&
+        reply.outcome.winner === entry.state.turn
+      );
+    });
+  });
+
+  return candidatesBlockingKnownWins.filter((entry) => {
+    if (entry.state.outcome.status === "won") return true;
     return !hasImmediateWinningMove(entry.state);
   });
 }
@@ -180,49 +182,6 @@ function searchNode(
   return value;
 }
 
-function easyChoice(
-  state: GameState,
-  model: ValueNetwork,
-  random: SeededRandom,
-  startedAt: number,
-): SearchResult {
-  const ranked = rankMoves(state, model, random, (state.size + 1) ** 2);
-  const immediate = ranked.find((entry) => entry.score >= 1.5);
-  if (immediate) {
-    return {
-      move: immediate.move,
-      score: 1,
-      depth: 1,
-      nodes: ranked.length,
-      elapsedMs: performance.now() - startedAt,
-      candidates: ranked.length,
-    };
-  }
-
-  const forcedResponses = forcedDefensiveResponses(state, ranked);
-  const choicePool = forcedResponses.length > 0 ? forcedResponses : ranked;
-  const shortlist = choicePool.slice(0, Math.min(3, choicePool.length));
-  const weights = shortlist.map((entry, index) => Math.exp(entry.score * 3.5 - index * 0.25));
-  let threshold = random.next() * weights.reduce((sum, value) => sum + value, 0);
-  let selected = shortlist[0];
-  for (let index = 0; index < shortlist.length; index += 1) {
-    threshold -= weights[index];
-    if (threshold <= 0) {
-      selected = shortlist[index];
-      break;
-    }
-  }
-
-  return {
-    move: selected.move,
-    score: selected.score,
-    depth: 1,
-    nodes: ranked.length,
-    elapsedMs: performance.now() - startedAt,
-    candidates: ranked.length,
-  };
-}
-
 export function chooseMoveWithSearch(
   state: GameState,
   model: ValueNetwork,
@@ -234,12 +193,8 @@ export function chooseMoveWithSearch(
 
   const startedAt = performance.now();
   const random = new SeededRandom(options.seed ?? state.moveNumber * 65_537 + 97);
-  if (options.difficulty === "easy") {
-    return easyChoice(state, model, random, startedAt);
-  }
-
-  const timeBudget = options.timeBudgetMs ?? 8_000;
-  const maxDepth = options.maxDepth ?? 4;
+  const timeBudget = options.timeBudgetMs ?? 12_000;
+  const maxDepth = options.maxDepth ?? 5;
   const rootRanked = rankMoves(state, model, random, state.size < 7 ? 64 : 144);
   const immediate = rootRanked.find((entry) => entry.score >= 1.5);
   if (immediate) {

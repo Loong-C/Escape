@@ -7,6 +7,7 @@ import {
   getShortestEscapeInfo,
   getWallSegments,
   isPassageBlocked,
+  isVertexInside,
   otherPlayer,
   walk,
   type Cell,
@@ -15,7 +16,7 @@ import {
   type Player,
 } from "../game";
 
-export const FEATURE_NAMES = [
+const SUMMARY_FEATURE_NAMES = [
   "bias",
   "own-nearest-exit",
   "opponent-nearest-exit",
@@ -46,6 +47,19 @@ export const FEATURE_NAMES = [
   "opponent-ball-wall-ratio",
   "reachable-cell-ratio",
   "reachable-exit-side-ratio",
+] as const;
+
+const LOCAL_OFFSETS = Array.from({ length: 7 }, (_, rowIndex) =>
+  Array.from({ length: 7 }, (_, colIndex) => ({
+    row: rowIndex - 3,
+    col: colIndex - 3,
+  })),
+).flat();
+
+export const FEATURE_NAMES = [
+  ...SUMMARY_FEATURE_NAMES,
+  ...LOCAL_OFFSETS.map(({ row, col }) => `local-post-${row}:${col}`),
+  ...LOCAL_OFFSETS.map(({ row, col }) => `local-valid-${row}:${col}`),
 ] as const;
 
 const HORIZONTAL_EXITS: Direction[] = ["left", "right"];
@@ -153,6 +167,30 @@ function reachableCellRatio(state: GameState): number {
   }
 
   return queue.length / (state.size * state.size);
+}
+
+function localSpatialFeatures(state: GameState, perspective: Player): number[] {
+  const coordinates = LOCAL_OFFSETS.map((offset) => {
+    // Transpose black's view so the acting side's goal axis is always horizontal.
+    // These are raw board observations, not a hand-authored position score.
+    const row =
+      perspective === "white"
+        ? state.ball.row + offset.row
+        : state.ball.row + offset.col;
+    const col =
+      perspective === "white"
+        ? state.ball.col + offset.col
+        : state.ball.col + offset.row;
+    return { row, col };
+  });
+  const posts = coordinates.map(({ row, col }) => {
+    const post = getPost(state, row, col);
+    return post === perspective ? 1 : post === null ? 0 : -1;
+  });
+  const validity = coordinates.map(({ row, col }) =>
+    isVertexInside(state.size, row, col) ? 1 : 0,
+  );
+  return [...posts, ...validity];
 }
 
 export function extractFeatures(state: GameState, perspective: Player): number[] {
@@ -269,6 +307,7 @@ export function extractFeatures(state: GameState, perspective: Player): number[]
     opponentBallWalls / DIRECTIONS.length,
     reachableCellRatio(state),
     reachableExitSides / DIRECTIONS.length,
+    ...localSpatialFeatures(state, perspective),
   ];
 }
 

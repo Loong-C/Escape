@@ -72,15 +72,17 @@ export function chooseExploratoryMove(
     candidateLimit: number;
     epsilon: number;
     temperature: number;
+    fullPolicyRate?: number;
   },
 ): RankedMove {
+  const sample = random.next() >= (options.fullPolicyRate ?? 0);
   const ranked = rankMoves(
     state,
     model,
     random,
     options.candidateLimit,
     state.turn,
-    true,
+    sample,
   );
   const immediateWin = ranked.find((entry) => entry.score >= 1.5);
   if (immediateWin) {
