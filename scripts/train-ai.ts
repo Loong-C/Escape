@@ -22,6 +22,7 @@ interface TrainingOptions {
   candidateLimit: number;
   replaySize: number;
   updatesPerEpisode: number;
+  fixedSize: number;
   checkpointEvery: number;
   checkpointDir: string;
   resume: string;
@@ -56,6 +57,7 @@ const options: TrainingOptions = {
   candidateLimit: numberArgument("candidates", 36),
   replaySize: numberArgument("replay", 120_000),
   updatesPerEpisode: numberArgument("updates", 56),
+  fixedSize: numberArgument("size", 0),
   checkpointEvery: numberArgument("checkpoint", 1_000),
   checkpointDir: stringArgument("checkpoint-dir", ""),
   resume: stringArgument("resume", ""),
@@ -97,6 +99,7 @@ function finalReward(state: GameState, perspective: Player): number {
 }
 
 function curriculumBoardSize(progress: number): number {
+  if (options.fixedSize > 0) return options.fixedSize;
   const sizes =
     progress < 0.2
       ? [3, 3, 5]
@@ -130,7 +133,10 @@ async function writeModel(episodes: number): Promise<void> {
     draws,
     trappedWins,
     escapedWins,
-    curriculum: "odd board sizes 3,5,7,9,11; final phase weighted toward 11",
+    curriculum:
+      options.fixedSize > 0
+        ? `fixed ${options.fixedSize}x${options.fixedSize} board`
+        : "odd board sizes 3,5,7,9,11; final phase weighted toward 11",
     boardCounts: [...boardCounts.entries()]
       .sort(([left], [right]) => left - right)
       .map(([size, count]) => `${size}:${count}`)
