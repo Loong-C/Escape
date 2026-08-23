@@ -44,8 +44,8 @@ export function StartScreen({
           />
           <p className="option-note">
             {difficulty === "easy"
-              ? "显示落子前后的四方向最短距离，AI 使用训练模型。"
-              : "隐藏距离提示，AI 使用更深的树搜索。"}
+              ? "显示棋盘外的四边距离提示。"
+              : "不显示距离提示，AI 思考时间更长。"}
           </p>
         </section>
 

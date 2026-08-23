@@ -729,8 +729,10 @@ button:disabled {
 }
 
 .match-result h2 {
+  margin: 0 0 8px;
   color: var(--accent);
   font-size: 24px;
+  line-height: 1.2;
 }
 
 .match-result p {
