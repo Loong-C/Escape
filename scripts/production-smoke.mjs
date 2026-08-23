@@ -16,6 +16,14 @@ const boundaryTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-boundary.png",
 );
+const distanceTutorialScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-distance.png",
+);
+const movementTutorialScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-movement.png",
+);
 const trappedTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-trapped.png",
@@ -172,6 +180,33 @@ for (let lesson = 0; lesson < 6; lesson += 1) {
   })()`);
   await delay(250);
 
+  if (lesson === 2) {
+    const changedEdges = await evaluate(
+      `[...document.querySelectorAll('.edge-distance[data-changed="true"]')]
+        .map((element) => element.dataset.direction)`,
+    );
+    const shortestEdges = await evaluate(
+      `[...document.querySelectorAll('.edge-distance.is-shortest')]
+        .map((element) => element.dataset.direction)`,
+    );
+    if (JSON.stringify(changedEdges) !== JSON.stringify(["up"])) {
+      throw new Error(`Distance tutorial changed the wrong edges: ${JSON.stringify(changedEdges)}`);
+    }
+    if (JSON.stringify(shortestEdges) !== JSON.stringify(["up"])) {
+      throw new Error(`Distance tutorial highlighted the wrong shortest edge: ${JSON.stringify(shortestEdges)}`);
+    }
+    await captureScreenshot(distanceTutorialScreenshotPath);
+  }
+  if (lesson === 3) {
+    const shortestEdges = await evaluate(
+      `[...document.querySelectorAll('.edge-distance.is-shortest')]
+        .map((element) => element.dataset.direction)`,
+    );
+    if (JSON.stringify(shortestEdges) !== JSON.stringify(["right"])) {
+      throw new Error(`Movement tutorial did not isolate the right edge: ${JSON.stringify(shortestEdges)}`);
+    }
+    await captureScreenshot(movementTutorialScreenshotPath);
+  }
   if (lesson === 4) {
     const boundaryRuleVisible = await evaluate(
       `document.body.innerText.includes("左右边界属于白方")`,
@@ -290,6 +325,8 @@ console.log(
       easyModeEdgeDirections: easyDistanceDirections,
       hardModeDistanceHints: distanceHintCount,
       startScreenshotPath,
+      distanceTutorialScreenshotPath,
+      movementTutorialScreenshotPath,
       boundaryTutorialScreenshotPath,
       trappedTutorialScreenshotPath,
       easyScreenshotPath,

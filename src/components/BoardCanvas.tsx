@@ -24,6 +24,7 @@ export interface BoardCanvasProps {
   focusedMove: Move | null;
   tutorialTarget?: Move | null;
   distanceHints?: BoardDistanceHints | null;
+  highlightShortestDistances?: boolean;
   interactive: boolean;
   canSelect?: (move: Move) => boolean;
   onHover: (move: Move | null) => void;
@@ -50,6 +51,7 @@ export function BoardCanvas({
   focusedMove,
   tutorialTarget = null,
   distanceHints = null,
+  highlightShortestDistances = false,
   interactive,
   canSelect,
   onHover,
@@ -158,15 +160,19 @@ export function BoardCanvas({
       tabIndex={interactive ? 0 : -1}
       aria-label={
         interactive
-          ? `Escape 棋盘。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列。`
-          : "Escape 棋盘"
+          ? `Escape 棋盘。当前${state.turn === "white" ? "白方目标为左右边界" : "黑方目标为上下边界"}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列。`
+          : `Escape 棋盘。当前${state.turn === "white" ? "白方目标为左右边界" : "黑方目标为上下边界"}。`
       }
       onKeyDown={handleKeyboard}
       onBlur={() => setKeyboardFocus(null)}
     >
       <div ref={hostRef} className="board-canvas" />
       {distanceHints && (
-        <BoardEdgeDistances current={distanceHints.current} after={distanceHints.after} />
+        <BoardEdgeDistances
+          current={distanceHints.current}
+          after={distanceHints.after}
+          highlightShortest={highlightShortestDistances}
+        />
       )}
     </div>
   );

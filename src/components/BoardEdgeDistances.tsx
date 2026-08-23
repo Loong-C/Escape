@@ -3,25 +3,37 @@ import { DIRECTIONS, type Direction, type DirectionalDistances } from "../game";
 interface BoardEdgeDistancesProps {
   current: DirectionalDistances;
   after: DirectionalDistances | null;
+  highlightShortest?: boolean;
 }
 
-const DIRECTION_META: Record<Direction, { label: string; symbol: string }> = {
-  up: { label: "上边", symbol: "↑" },
-  right: { label: "右边", symbol: "→" },
-  down: { label: "下边", symbol: "↓" },
-  left: { label: "左边", symbol: "←" },
+const DIRECTION_LABELS: Record<Direction, string> = {
+  up: "上边",
+  right: "右边",
+  down: "下边",
+  left: "左边",
 };
 
 function formatDistance(value: number): string {
   return Number.isFinite(value) ? String(value) : "∞";
 }
 
-export function BoardEdgeDistances({ current, after }: BoardEdgeDistancesProps) {
+export function BoardEdgeDistances({
+  current,
+  after,
+  highlightShortest = false,
+}: BoardEdgeDistancesProps) {
+  const displayed = after ?? current;
+  const finiteDistances = DIRECTIONS.map((direction) => displayed[direction]).filter(
+    Number.isFinite,
+  );
+  const shortest = finiteDistances.length > 0 ? Math.min(...finiteDistances) : null;
   const announcement = DIRECTIONS.map((direction) => {
-    const { label } = DIRECTION_META[direction];
+    const label = DIRECTION_LABELS[direction];
     const currentText = formatDistance(current[direction]);
-    if (!after) return `${label}当前 ${currentText} 步`;
-    return `${label}当前 ${currentText} 步，落子后 ${formatDistance(after[direction])} 步`;
+    if (!after || after[direction] === current[direction]) {
+      return `${label} ${currentText} 步`;
+    }
+    return `${label}从 ${currentText} 步变为 ${formatDistance(after[direction])} 步`;
   }).join("；");
 
   return (
@@ -30,24 +42,21 @@ export function BoardEdgeDistances({ current, after }: BoardEdgeDistancesProps) 
       {DIRECTIONS.map((direction) => {
         const next = after?.[direction] ?? null;
         const changed = next !== null && next !== current[direction];
+        const isShortest =
+          highlightShortest && shortest !== null && displayed[direction] === shortest;
         return (
           <div
-            className="edge-distance"
+            className={`edge-distance${isShortest ? " is-shortest" : ""}`}
             data-direction={direction}
+            data-changed={changed ? "true" : "false"}
             key={direction}
             aria-hidden="true"
           >
-            <span className="edge-distance__direction">
-              {DIRECTION_META[direction].symbol}
+            <span className={changed ? "edge-distance__previous" : undefined}>
+              {formatDistance(current[direction])}
             </span>
-            <span>{formatDistance(current[direction])}</span>
-            {next !== null && (
-              <>
-                <span className="edge-distance__separator">›</span>
-                <strong className={changed ? "is-changed" : undefined}>
-                  {formatDistance(next)}
-                </strong>
-              </>
+            {changed && next !== null && (
+              <strong className="is-changed">{formatDistance(next)}</strong>
             )}
           </div>
         );

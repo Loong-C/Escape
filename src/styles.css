@@ -156,13 +156,14 @@ button:disabled {
 }
 
 .brand-mark {
-  width: 27px;
+  width: 31px;
   height: 24px;
   flex: 0 0 auto;
   color: var(--header-text);
 }
 
-.escape-mark__ball {
+.escape-mark__ball,
+.escape-mark__motion {
   fill: var(--accent);
 }
 
@@ -283,12 +284,12 @@ button:disabled {
 .edge-distance {
   position: absolute;
   display: inline-flex;
-  min-width: 38px;
+  min-width: 32px;
   min-height: 25px;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 2px 6px;
+  gap: 6px;
+  padding: 2px 5px;
   border: 1px solid var(--border-strong);
   border-radius: 3px;
   color: var(--text);
@@ -296,36 +297,38 @@ button:disabled {
   font-size: clamp(10px, 1.1vw, 13px);
   font-weight: 590;
   line-height: 1;
+  box-shadow: 0 2px 7px rgb(13 18 28 / 0.08);
+  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
 }
 
 .edge-distance[data-direction="up"] {
-  top: 7.2%;
+  top: 5.2%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
 
 .edge-distance[data-direction="right"] {
   top: 50%;
-  right: 7.2%;
+  right: 5.2%;
   transform: translate(50%, -50%);
 }
 
 .edge-distance[data-direction="down"] {
-  bottom: 7.2%;
+  bottom: 5.2%;
   left: 50%;
   transform: translate(-50%, 50%);
 }
 
 .edge-distance[data-direction="left"] {
   top: 50%;
-  left: 7.2%;
+  left: 5.2%;
   transform: translate(-50%, -50%);
 }
 
-.edge-distance__direction,
-.edge-distance__separator {
+.edge-distance__previous {
   color: var(--subtle);
-  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .edge-distance strong {
@@ -335,6 +338,14 @@ button:disabled {
 .edge-distance strong.is-changed {
   color: var(--accent);
   font-weight: 720;
+}
+
+.edge-distance.is-shortest {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent),
+    0 3px 12px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .side-rail {
@@ -455,7 +466,7 @@ button:disabled {
 }
 
 .escape-logo__mark {
-  width: 82px;
+  width: 92px;
   height: 72px;
   flex: 0 0 auto;
 }
@@ -709,6 +720,10 @@ button:disabled {
 }
 
 .match-result {
+  margin: 16px 0 0;
+  padding: 19px 16px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border)) !important;
+  border-radius: var(--radius);
   color: var(--text);
   background: var(--accent-soft);
 }
@@ -881,7 +896,7 @@ button:disabled {
   }
 
   .brand-mark {
-    width: 24px;
+    width: 28px;
     height: 22px;
   }
 
@@ -923,8 +938,16 @@ button:disabled {
   }
 
   .escape-logo__mark {
-    width: 68px;
+    width: 76px;
     height: 60px;
+  }
+
+  .edge-distance {
+    min-width: 28px;
+    min-height: 22px;
+    gap: 4px;
+    padding: 1px 4px;
+    font-size: 10px;
   }
 
   .escape-logo strong {

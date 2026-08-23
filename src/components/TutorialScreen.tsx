@@ -16,8 +16,8 @@ interface TutorialScreenProps {
 const SUCCESS_MESSAGES = [
   "这枚桩尚未连接墙，所以它是浮桩。",
   "墙已经形成，两枚白桩现在都是锚桩。",
-  "落子改变了上方出口的最短距离，球仍有多个同长首步，所以没有移动。",
-  "全部最短路线从右侧开始，球按规则只移动了一格。",
+  "墙挡住了直接向上的出口，上边距离从 1 变为 2；两个同长首步并存，所以球没有移动。",
+  "新墙让上边距离变长，右侧成为唯一的最短首步，球按规则只移动了一格。",
   "球从右边界离开。左右边界属于白方，所以这一局由白方获胜。",
   "四面墙已经封闭。落下最后一枚桩的白方立即获胜。",
 ] as const;
@@ -77,6 +77,7 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
                 }
               : null
           }
+          highlightShortestDistances={lesson.showDistances}
           interactive={!completed}
           canSelect={(move) =>
             !completed && move.row === lesson.target.row && move.col === lesson.target.col

@@ -24,7 +24,7 @@ interface BoardSceneCallbacks {
 }
 
 const CANVAS_SIZE = 1_000;
-const BOARD_MARGIN = 72;
+const BOARD_MARGIN = 104;
 const BOARD_LENGTH = CANVAS_SIZE - BOARD_MARGIN * 2;
 
 const LIGHT_COLORS = {
@@ -124,6 +124,7 @@ export class EscapeBoardScene extends Phaser.Scene {
 
     graphics.lineStyle(2, colors.boundary, 1);
     graphics.strokeRect(BOARD_MARGIN, BOARD_MARGIN, BOARD_LENGTH, BOARD_LENGTH);
+    this.drawTargetEdges(graphics, colors.accent);
 
     for (const wall of getWallSegments(state)) {
       const start = this.point(state.size, wall.row, wall.col);
@@ -189,6 +190,46 @@ export class EscapeBoardScene extends Phaser.Scene {
 
     if (this.view.interactive) {
       this.addInteractionZones();
+    }
+  }
+
+  private drawTargetEdges(
+    graphics: Phaser.GameObjects.Graphics,
+    accent: number,
+  ): void {
+    if (!this.view || this.view.state.outcome.status !== "playing") {
+      return;
+    }
+
+    const { state } = this.view;
+    const segments =
+      state.turn === "white"
+        ? [
+            [BOARD_MARGIN, BOARD_MARGIN, BOARD_MARGIN, BOARD_MARGIN + BOARD_LENGTH],
+            [
+              BOARD_MARGIN + BOARD_LENGTH,
+              BOARD_MARGIN,
+              BOARD_MARGIN + BOARD_LENGTH,
+              BOARD_MARGIN + BOARD_LENGTH,
+            ],
+          ]
+        : [
+            [BOARD_MARGIN, BOARD_MARGIN, BOARD_MARGIN + BOARD_LENGTH, BOARD_MARGIN],
+            [
+              BOARD_MARGIN,
+              BOARD_MARGIN + BOARD_LENGTH,
+              BOARD_MARGIN + BOARD_LENGTH,
+              BOARD_MARGIN + BOARD_LENGTH,
+            ],
+          ];
+
+    for (const [x1, y1, x2, y2] of segments) {
+      graphics.lineStyle(26, accent, 0.055);
+      graphics.lineBetween(x1, y1, x2, y2);
+      graphics.lineStyle(13, accent, 0.12);
+      graphics.lineBetween(x1, y1, x2, y2);
+      graphics.lineStyle(3, accent, 0.78);
+      graphics.lineBetween(x1, y1, x2, y2);
     }
   }
 
