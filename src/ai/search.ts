@@ -56,10 +56,10 @@ function leafValue(state: GameState, model: ValueNetwork, rootPlayer: Player): n
 }
 
 function branchingLimit(depth: number): number {
-  if (depth >= 4) return 8;
-  if (depth === 3) return 10;
-  if (depth === 2) return 14;
-  return 18;
+  if (depth >= 4) return 7;
+  if (depth === 3) return 8;
+  if (depth === 2) return 10;
+  return 13;
 }
 
 function searchNode(
@@ -194,7 +194,7 @@ export function chooseMoveWithSearch(
   let completedDepth = 1;
   let totalNodes = rootRanked.length;
   const deadline = startedAt + timeBudget;
-  const rootSearch = rootRanked.slice(0, state.size < 7 ? 64 : 48);
+  const rootSearch = rootRanked.slice(0, state.size < 7 ? 48 : 28);
 
   for (let depth = 2; depth <= maxDepth; depth += 1) {
     const context: SearchContext = {
@@ -207,16 +207,25 @@ export function chooseMoveWithSearch(
     };
     let iterationBestMove = bestMove;
     let iterationBestScore = Number.NEGATIVE_INFINITY;
+    let rootAlpha = Number.NEGATIVE_INFINITY;
+    const orderedRoot = [
+      ...rootSearch.filter(
+        (entry) => entry.move.row === bestMove.row && entry.move.col === bestMove.col,
+      ),
+      ...rootSearch.filter(
+        (entry) => entry.move.row !== bestMove.row || entry.move.col !== bestMove.col,
+      ),
+    ];
 
     try {
-      for (const entry of rootSearch) {
+      for (const entry of orderedRoot) {
         if (performance.now() >= deadline) {
           throw new SearchTimeout();
         }
         const score = searchNode(
           entry.state,
           depth - 1,
-          Number.NEGATIVE_INFINITY,
+          rootAlpha,
           Number.POSITIVE_INFINITY,
           context,
         );
@@ -224,6 +233,7 @@ export function chooseMoveWithSearch(
           iterationBestScore = score;
           iterationBestMove = entry.move;
         }
+        rootAlpha = Math.max(rootAlpha, score);
       }
 
       bestMove = iterationBestMove;

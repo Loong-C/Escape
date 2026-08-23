@@ -28,7 +28,7 @@ self.onmessage = async (event: MessageEvent<AiMoveRequest>) => {
     const model = await loadModel();
     const result = chooseMoveWithSearch(request.state, model, {
       difficulty: request.difficulty,
-      timeBudgetMs: request.difficulty === "hard" ? 3_600 : 260,
+      timeBudgetMs: request.difficulty === "hard" ? 5_200 : 260,
       maxDepth: request.difficulty === "hard" ? 4 : 1,
       seed: request.state.moveNumber * 65_537 + request.requestId,
     });

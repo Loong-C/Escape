@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { createGame, type GameState, type Player } from "../src/game/index.ts";
@@ -19,6 +19,8 @@ interface TrainingOptions {
   replaySize: number;
   updatesPerEpisode: number;
   checkpointEvery: number;
+  checkpointDir: string;
+  resume: string;
   output: string;
 }
 
@@ -51,6 +53,8 @@ const options: TrainingOptions = {
   replaySize: numberArgument("replay", 60_000),
   updatesPerEpisode: numberArgument("updates", 40),
   checkpointEvery: numberArgument("checkpoint", 500),
+  checkpointDir: stringArgument("checkpoint-dir", ""),
+  resume: stringArgument("resume", ""),
   output: stringArgument(
     "output",
     resolve(process.cwd(), "src/ai/model/escape-value.json"),
@@ -58,12 +62,20 @@ const options: TrainingOptions = {
 };
 
 const random = new SeededRandom(options.seed);
-const network = new ValueNetwork(options.hiddenSize, random);
+const resumedModel = options.resume
+  ? (JSON.parse(await readFile(options.resume, "utf8")) as ReturnType<ValueNetwork["serialize"]>)
+  : null;
+const network = resumedModel
+  ? ValueNetwork.fromJSON(resumedModel)
+  : new ValueNetwork(options.hiddenSize, random);
+const previousEpisodes = resumedModel?.metadata.episodes ?? 0;
+const previousElapsedSeconds = resumedModel?.metadata.elapsedSeconds ?? 0;
+const targetEpisodes = previousEpisodes + options.episodes;
 const replay: ReplaySample[] = [];
 const startedAt = performance.now();
-let whiteWins = 0;
-let blackWins = 0;
-let draws = 0;
+let whiteWins = resumedModel?.metadata.whiteWins ?? 0;
+let blackWins = resumedModel?.metadata.blackWins ?? 0;
+let draws = resumedModel?.metadata.draws ?? 0;
 let rollingLoss = 0;
 let rollingMoves = 0;
 
@@ -91,19 +103,31 @@ async function writeModel(episodes: number): Promise<void> {
     episodes,
     seed: options.seed,
     trainedAt: new Date().toISOString(),
-    elapsedSeconds: (performance.now() - startedAt) / 1_000,
+    elapsedSeconds:
+      previousElapsedSeconds + (performance.now() - startedAt) / 1_000,
     whiteWins,
     blackWins,
     draws,
+    continuedFromEpisodes: previousEpisodes,
+    additionalEpisodes: episodes - previousEpisodes,
   };
+  const payload = `${JSON.stringify(network.serialize(metadata), null, 2)}\n`;
   await mkdir(dirname(options.output), { recursive: true });
-  await writeFile(options.output, `${JSON.stringify(network.serialize(metadata), null, 2)}\n`);
+  await writeFile(options.output, payload);
+  if (options.checkpointDir) {
+    await mkdir(options.checkpointDir, { recursive: true });
+    await writeFile(
+      resolve(options.checkpointDir, `escape-value-${episodes}.json`),
+      payload,
+    );
+  }
 }
 
 for (let episode = 1; episode <= options.episodes; episode += 1) {
   let state = createGame();
   const trajectory: EpisodePosition[] = [];
-  const progress = episode / options.episodes;
+  const completedEpisodes = previousEpisodes + episode;
+  const progress = completedEpisodes / targetEpisodes;
   const epsilon = 0.3 * (1 - progress) + 0.035;
   const temperature = 0.34 * (1 - progress) + 0.06;
   const moveLimit = (state.size + 1) * (state.size + 1) + 40;
@@ -154,7 +178,7 @@ for (let episode = 1; episode <= options.episodes; episode += 1) {
     const meanLoss = rollingLoss / (100 * options.updatesPerEpisode);
     const meanMoves = rollingMoves / 100;
     process.stdout.write(
-      `episode=${episode}/${options.episodes} ` +
+      `episode=${completedEpisodes}/${targetEpisodes} ` +
         `loss=${meanLoss.toFixed(4)} moves=${meanMoves.toFixed(1)} ` +
         `W=${whiteWins} B=${blackWins} D=${draws} ` +
         `speed=${gamesPerSecond.toFixed(2)}eps/s\n`,
@@ -164,9 +188,9 @@ for (let episode = 1; episode <= options.episodes; episode += 1) {
   }
 
   if (episode % options.checkpointEvery === 0) {
-    await writeModel(episode);
+    await writeModel(completedEpisodes);
   }
 }
 
-await writeModel(options.episodes);
+await writeModel(targetEpisodes);
 process.stdout.write(`model=${options.output}\n`);
