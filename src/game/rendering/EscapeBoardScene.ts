@@ -242,7 +242,7 @@ export class EscapeBoardScene extends Phaser.Scene {
     }
     const { state } = this.view;
     const step = BOARD_LENGTH / state.size;
-    const hitSize = Math.max(38, step * 0.82);
+    const hitSize = Math.max(44, step * 0.92);
 
     for (let row = 0; row <= state.size; row += 1) {
       for (let col = 0; col <= state.size; col += 1) {

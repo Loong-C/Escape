@@ -71,7 +71,9 @@ export function MatchScreen({
   const [aiThinking, setAiThinking] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiRetryToken, setAiRetryToken] = useState(0);
-  const [searchStats, setSearchStats] = useState<Omit<SearchResult, "move"> | null>(null);
+  const [searchStats, setSearchStats] = useState<
+    (Omit<SearchResult, "move"> & { difficulty: AiDifficulty }) | null
+  >(null);
   const pendingMoveNumber = useRef<number | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -108,7 +110,7 @@ export function MatchScreen({
         ) {
           return;
         }
-        setSearchStats(result.stats);
+        setSearchStats({ ...result.stats, difficulty });
         setState(applyMove(current, result.move));
       })
       .catch((error: Error) => {
@@ -173,7 +175,7 @@ export function MatchScreen({
         : null;
 
   return (
-    <main className="game-layout match-layout">
+    <main id="main-content" className="game-layout match-layout" tabIndex={-1}>
       <section className="playfield-region">
         <LazyBoardCanvas
           state={state}
@@ -186,7 +188,7 @@ export function MatchScreen({
       </section>
 
       <aside className="side-rail match-rail">
-        <section className="turn-section" aria-live="polite">
+        <section className="turn-section" aria-live="polite" aria-busy={aiThinking}>
           <div className="section-heading">
             <h1>当前回合</h1>
             <span>第 {state.moveNumber + 1} 回合</span>
@@ -230,7 +232,7 @@ export function MatchScreen({
             <h2>上一步</h2>
           </div>
           <p>{describeLastMove(state)}</p>
-          {difficulty === "hard" && searchStats && (
+          {difficulty === "hard" && searchStats?.difficulty === "hard" && (
             <span>AI 搜索深度 {searchStats.depth}，评估 {searchStats.nodes} 个节点</span>
           )}
         </section>

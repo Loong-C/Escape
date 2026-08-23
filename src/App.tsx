@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AiDifficulty } from "./ai";
 import { AppHeader } from "./components/AppHeader";
 import { MatchScreen } from "./components/MatchScreen";
@@ -13,10 +13,17 @@ export function App() {
   const [difficulty, setDifficulty] = useState<AiDifficulty>("easy");
   const [rulesOpen, setRulesOpen] = useState(false);
 
+  useEffect(() => {
+    if (screen !== "start") {
+      document.getElementById("main-content")?.focus({ preventScroll: true });
+    }
+  }, [screen]);
+
   const context = screen === "start" ? "逃脱" : screen === "tutorial" ? "新手教程" : "人机对战";
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
       <AppHeader
         context={context}
         onRules={() => setRulesOpen(true)}

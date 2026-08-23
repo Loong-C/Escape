@@ -62,7 +62,7 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
   const currentDistances = displayedPreview?.before ?? getDirectionalExitDistances(state);
 
   return (
-    <main className="game-layout tutorial-layout">
+    <main id="main-content" className="game-layout tutorial-layout" tabIndex={-1}>
       <section className="playfield-region">
         <LazyBoardCanvas
           state={state}

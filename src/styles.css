@@ -10,9 +10,9 @@
   --rail: #ffffff;
   --text: #191c20;
   --muted: #646b74;
-  --subtle: #8a919a;
+  --subtle: #6d747e;
   --border: #d9dce1;
-  --border-strong: #a5abb3;
+  --border-strong: #7d858f;
   --header: #17191c;
   --header-text: #f5f6f7;
   --header-muted: #b9bec5;
@@ -84,6 +84,7 @@ button {
 button,
 [role="application"] {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 button:focus-visible,
@@ -100,6 +101,28 @@ button:disabled {
 .app-shell {
   min-height: 100dvh;
   background: var(--background);
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  color: #ffffff;
+  background: var(--accent);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 12px));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .app-header {
@@ -200,13 +223,14 @@ button:disabled {
   overflow: hidden;
   border-radius: 2px;
   background: var(--surface);
+  touch-action: manipulation;
 }
 
 .board-loading {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  color: var(--text-secondary);
+  color: var(--muted);
   font-size: 0.8125rem;
   letter-spacing: 0.08em;
 }
@@ -690,8 +714,8 @@ button:disabled {
 
 .inline-error button {
   width: fit-content;
-  min-height: 36px;
-  padding: 0;
+  min-height: 44px;
+  padding: 0 4px;
   border: 0;
   color: var(--danger);
   background: transparent;

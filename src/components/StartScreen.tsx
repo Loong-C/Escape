@@ -19,7 +19,7 @@ export function StartScreen({
   onMatch,
 }: StartScreenProps) {
   return (
-    <main className="game-layout start-layout">
+    <main id="main-content" className="game-layout start-layout" tabIndex={-1}>
       <section className="playfield-region" aria-label="游戏棋盘预览">
         <LazyBoardCanvas
           state={HOME_BOARD}
@@ -31,7 +31,7 @@ export function StartScreen({
       </section>
       <aside className="side-rail start-rail">
         <div>
-          <h1>控制最短距离，让球逃脱</h1>
+          <h1>控制最短距离，<br />让球逃脱</h1>
           <p className="lead-copy">放置桩，连接墙，改变球通往四条边界的最少步数。</p>
         </div>
 
@@ -46,7 +46,7 @@ export function StartScreen({
           />
           <p className="option-note">
             {difficulty === "easy"
-              ? "显示落子前后的四方向最短距离，AI 使用标准搜索。"
+              ? "显示落子前后的四方向最短距离，AI 使用训练模型。"
               : "隐藏距离提示，AI 使用更深的树搜索。"}
           </p>
         </section>
