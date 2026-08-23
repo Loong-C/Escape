@@ -14,7 +14,6 @@ import {
 } from "../game";
 import { useAiWorker } from "../hooks/useAiWorker";
 import { DifficultySwitch } from "./DifficultySwitch";
-import { DistancePanel } from "./DistancePanel";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 
 interface MatchScreenProps {
@@ -136,6 +135,13 @@ export function MatchScreen({
 
   const currentDistances = getDirectionalExitDistances(state);
   const movePreview = focusedMove ? previewMove(state, focusedMove) : null;
+  const distanceHints =
+    difficulty === "easy"
+      ? {
+          current: movePreview?.before ?? currentDistances,
+          after: movePreview?.afterPlacement ?? null,
+        }
+      : null;
 
   function commitMove(move: Move): void {
     if (!humanTurn || aiThinking || !getLegalMove(state, move)) return;
@@ -180,6 +186,7 @@ export function MatchScreen({
         <LazyBoardCanvas
           state={state}
           focusedMove={focusedMove}
+          distanceHints={distanceHints}
           interactive={humanTurn && !aiThinking}
           canSelect={(move) => humanTurn && !aiThinking && getLegalMove(state, move) !== null}
           onHover={(move) => setFocusedMove(move)}
@@ -213,13 +220,6 @@ export function MatchScreen({
             labelledBy="match-difficulty-heading"
           />
         </section>
-
-        {difficulty === "easy" && (
-          <DistancePanel
-            current={movePreview?.before ?? currentDistances}
-            after={movePreview?.afterPlacement ?? null}
-          />
-        )}
 
         {coarsePointer && focusedMove && movePreview && humanTurn && (
           <button className="primary-button mobile-confirm" type="button" onClick={() => commitMove(focusedMove)}>

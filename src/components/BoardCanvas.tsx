@@ -1,16 +1,29 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import * as Phaser from "phaser";
-import { getLegalMove, previewMove, type GameState, type Move } from "../game";
+import {
+  getLegalMove,
+  previewMove,
+  type DirectionalDistances,
+  type GameState,
+  type Move,
+} from "../game";
 import {
   BOARD_CANVAS_SIZE,
   EscapeBoardScene,
   type BoardSceneView,
 } from "../game/rendering/EscapeBoardScene";
+import { BoardEdgeDistances } from "./BoardEdgeDistances";
+
+export interface BoardDistanceHints {
+  current: DirectionalDistances;
+  after: DirectionalDistances | null;
+}
 
 export interface BoardCanvasProps {
   state: GameState;
   focusedMove: Move | null;
   tutorialTarget?: Move | null;
+  distanceHints?: BoardDistanceHints | null;
   interactive: boolean;
   canSelect?: (move: Move) => boolean;
   onHover: (move: Move | null) => void;
@@ -36,6 +49,7 @@ export function BoardCanvas({
   state,
   focusedMove,
   tutorialTarget = null,
+  distanceHints = null,
   interactive,
   canSelect,
   onHover,
@@ -151,6 +165,9 @@ export function BoardCanvas({
       onBlur={() => setKeyboardFocus(null)}
     >
       <div ref={hostRef} className="board-canvas" />
+      {distanceHints && (
+        <BoardEdgeDistances current={distanceHints.current} after={distanceHints.after} />
+      )}
     </div>
   );
 }

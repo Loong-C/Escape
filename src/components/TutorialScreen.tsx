@@ -7,7 +7,6 @@ import {
   createTutorialLessons,
 } from "../tutorial/lessons";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
-import { DistancePanel } from "./DistancePanel";
 
 interface TutorialScreenProps {
   onHome: () => void;
@@ -19,6 +18,8 @@ const SUCCESS_MESSAGES = [
   "墙已经形成，两枚白桩现在都是锚桩。",
   "落子改变了上方出口的最短距离，球仍有多个同长首步，所以没有移动。",
   "全部最短路线从右侧开始，球按规则只移动了一格。",
+  "球从右边界离开。左右边界属于白方，所以这一局由白方获胜。",
+  "四面墙已经封闭。落下最后一枚桩的白方立即获胜。",
 ] as const;
 
 export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
@@ -68,6 +69,14 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
           state={state}
           focusedMove={boardFocus}
           tutorialTarget={lesson.target}
+          distanceHints={
+            lesson.showDistances && displayedPreview
+              ? {
+                  current: currentDistances,
+                  after: displayedPreview.afterPlacement,
+                }
+              : null
+          }
           interactive={!completed}
           canSelect={(move) =>
             !completed && move.row === lesson.target.row && move.col === lesson.target.col
@@ -93,14 +102,6 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
             <span><i className="post-symbol post-symbol--float" />浮桩</span>
             <span><i className="post-symbol post-symbol--anchor" />锚桩</span>
           </div>
-        )}
-
-        {lesson.showDistances && displayedPreview && (
-          <DistancePanel
-            current={currentDistances}
-            after={displayedPreview.afterPlacement}
-            compact
-          />
         )}
 
         <div className="tutorial-feedback" aria-live="polite">

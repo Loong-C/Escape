@@ -1,4 +1,5 @@
 import { BookOpen, House } from "@phosphor-icons/react";
+import { EscapeMark } from "./EscapeLogo";
 
 interface AppHeaderProps {
   context: string;
@@ -10,6 +11,7 @@ export function AppHeader({ context, onRules, onHome }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div className="brand-lockup" aria-label="Escape 逃脱">
+        <EscapeMark className="brand-mark" />
         <strong>ESCAPE</strong>
         <span aria-hidden="true" />
         <em>{context}</em>

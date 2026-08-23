@@ -2,6 +2,7 @@ import type { AiDifficulty } from "../ai";
 import { createHomeBoard } from "../game/presets";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 import { DifficultySwitch } from "./DifficultySwitch";
+import { EscapeLogo } from "./EscapeLogo";
 
 interface StartScreenProps {
   difficulty: AiDifficulty;
@@ -30,10 +31,7 @@ export function StartScreen({
         />
       </section>
       <aside className="side-rail start-rail">
-        <div>
-          <h1>控制最短距离，<br />让球逃脱</h1>
-          <p className="lead-copy">放置桩，连接墙，改变球通往四条边界的最少步数。</p>
-        </div>
+        <EscapeLogo />
 
         <section className="start-options">
           <div className="section-heading">

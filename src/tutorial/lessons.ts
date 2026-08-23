@@ -12,7 +12,9 @@ export const TUTORIAL_LABELS = [
   "放置桩",
   "形成墙",
   "最短路径长度",
-  "完成练习",
+  "推动球",
+  "边界胜负",
+  "封闭胜负",
 ] as const;
 
 export interface TutorialLesson {
@@ -53,6 +55,28 @@ function movementLessonState(): GameState {
   return state;
 }
 
+function boundaryWinLessonState(): GameState {
+  let state = createGame(5);
+  const entries: Array<[number, number, Player]> = [];
+  for (let col = 0; col <= state.size; col += 1) {
+    entries.push([0, col, "black"]);
+    entries.push([state.size, col, "white"]);
+  }
+  for (let row = 1; row < state.size; row += 1) {
+    entries.push([row, 0, "black"]);
+  }
+  state = placeMany(state, entries);
+  return { ...state, ball: { row: 2, col: 4 }, turn: "black" };
+}
+
+function trappedWinLessonState(): GameState {
+  return placeMany(createGame(5), [
+    [2, 2, "white"],
+    [2, 3, "white"],
+    [3, 2, "white"],
+  ]);
+}
+
 export function createTutorialLessons(): TutorialLesson[] {
   return [
     {
@@ -83,12 +107,30 @@ export function createTutorialLessons(): TutorialLesson[] {
       showDistances: true,
     },
     {
-      label: "完成练习",
+      label: "推动球",
       title: "唯一的最短首步推动球",
       description: "如果全部最短逃生路线的第一步相同，球向该方向移动一格。一次落桩最多推动一次。",
       instruction: "完成这次落桩，观察球向右移动一格。",
       target: { row: 6, col: 7 },
       initialState: movementLessonState(),
+      showDistances: true,
+    },
+    {
+      label: "边界胜负",
+      title: "球从哪条边出去，哪一方获胜",
+      description: "左右边界属于白方，上下边界属于黑方。胜者由球离开的方向决定，不一定是最后落桩的人。",
+      instruction: "黑方落桩后，观察球从右边界离开并判定白方获胜。",
+      target: { row: 3, col: 3 },
+      initialState: boundaryWinLessonState(),
+      showDistances: true,
+    },
+    {
+      label: "封闭胜负",
+      title: "封住全部出口也能获胜",
+      description: "如果一次落桩让球没有任何逃生路径，落下这枚桩的玩家立即获胜。",
+      instruction: "补上最后一个角，让四面墙完全封住球。",
+      target: { row: 3, col: 3 },
+      initialState: trappedWinLessonState(),
       showDistances: true,
     },
   ];

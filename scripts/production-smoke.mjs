@@ -4,9 +4,21 @@ import { dirname, resolve } from "node:path";
 const debuggerUrl = process.argv[2] ?? "http://127.0.0.1:9223";
 const targetUrl =
   process.argv[3] ?? "https://linkukai.com/games/Escape/?qa=production-smoke";
+const viewportWidth = Number(process.argv[5] ?? 0);
+const viewportHeight = Number(process.argv[6] ?? 0);
 const screenshotPath = resolve(
   process.cwd(),
   process.argv[4] ?? "artifacts/screenshots/production-cdp.png",
+);
+const easyScreenshotPath = screenshotPath.replace(/\.png$/i, "-easy.png");
+const startScreenshotPath = screenshotPath.replace(/\.png$/i, "-start.png");
+const boundaryTutorialScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-boundary.png",
+);
+const trappedTutorialScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-trapped.png",
 );
 
 const targets = await fetch(`${debuggerUrl}/json/list`).then((response) => response.json());
@@ -100,12 +112,29 @@ async function evaluate(expression) {
   return result.result.value;
 }
 
+async function captureScreenshot(path) {
+  const screenshot = await send("Page.captureScreenshot", {
+    format: "png",
+    captureBeyondViewport: false,
+  });
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, Buffer.from(screenshot.data, "base64"));
+}
+
 await Promise.all([
   send("Page.enable"),
   send("Runtime.enable"),
   send("Log.enable"),
   send("Network.enable"),
 ]);
+if (viewportWidth > 0 && viewportHeight > 0) {
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: viewportWidth,
+    height: viewportHeight,
+    deviceScaleFactor: 1,
+    mobile: true,
+  });
+}
 const loaded = once("Page.loadEventFired", 45_000);
 await send("Page.navigate", { url: targetUrl });
 await loaded;
@@ -116,6 +145,61 @@ const startVisible = await evaluate(
     .find((button) => button.textContent.trim() === "开始人机对战"))`,
 );
 if (!startVisible) throw new Error("Start screen did not render.");
+
+const logoVisible = await evaluate(
+  `Boolean(document.querySelector('[data-escape-logo="hero"]'))`,
+);
+if (!logoVisible) throw new Error("The Escape logo did not render.");
+await captureScreenshot(startScreenshotPath);
+
+await evaluate(
+  `[...document.querySelectorAll("button")]
+    .find((button) => button.textContent.trim() === "新手教程").click()`,
+);
+await delay(350);
+for (let lesson = 0; lesson < 6; lesson += 1) {
+  const stepVisible = await evaluate(
+    `document.body.innerText.includes("${lesson + 1} / 6")`,
+  );
+  if (!stepVisible) throw new Error(`Tutorial lesson ${lesson + 1} did not render.`);
+
+  await evaluate(`(() => {
+    const board = document.querySelector('[role="application"]');
+    board.focus();
+    board.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Enter", code: "Enter", bubbles: true
+    }));
+  })()`);
+  await delay(250);
+
+  if (lesson === 4) {
+    const boundaryRuleVisible = await evaluate(
+      `document.body.innerText.includes("左右边界属于白方")`,
+    );
+    if (!boundaryRuleVisible) throw new Error("Boundary victory tutorial feedback is missing.");
+    await captureScreenshot(boundaryTutorialScreenshotPath);
+  }
+  if (lesson === 5) {
+    const trappedRuleVisible = await evaluate(
+      `document.body.innerText.includes("四面墙已经封闭")`,
+    );
+    if (!trappedRuleVisible) throw new Error("Trapped victory tutorial feedback is missing.");
+    await captureScreenshot(trappedTutorialScreenshotPath);
+    break;
+  }
+
+  await evaluate(
+    `[...document.querySelectorAll("button")]
+      .find((button) => button.textContent.trim() === "继续").click()`,
+  );
+  await delay(200);
+}
+
+await evaluate(
+  `[...document.querySelectorAll("button")]
+    .find((button) => button.textContent.trim() === "退出教程").click()`,
+);
+await delay(300);
 
 await evaluate(
   `[...document.querySelectorAll("button")]
@@ -150,16 +234,34 @@ if (modelStatus !== 200) {
   throw new Error("The trained AI model was not loaded with HTTP 200.");
 }
 
+const easyDistanceDirections = await evaluate(
+  `[...document.querySelectorAll('.edge-distance')]
+    .map((element) => element.dataset.direction)
+    .sort()`,
+);
+if (JSON.stringify(easyDistanceDirections) !== JSON.stringify(["down", "left", "right", "up"])) {
+  throw new Error(`Easy mode edge hints are incomplete: ${JSON.stringify(easyDistanceDirections)}`);
+}
+await evaluate(`(() => {
+  const board = document.querySelector('[role="application"]');
+  board.focus();
+  board.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "ArrowDown", code: "ArrowDown", bubbles: true
+  }));
+})()`);
+await delay(250);
+await captureScreenshot(easyScreenshotPath);
+
 await evaluate(
   `[...document.querySelectorAll("button")]
     .find((button) => button.textContent.trim() === "困难").click()`,
 );
 await delay(250);
-const distanceTableCount = await evaluate(
-  `document.querySelectorAll('[role="table"]').length`,
+const distanceHintCount = await evaluate(
+  `document.querySelectorAll('.edge-distance').length`,
 );
-if (distanceTableCount !== 0) {
-  throw new Error("Hard mode still exposes the distance hint table.");
+if (distanceHintCount !== 0) {
+  throw new Error("Hard mode still exposes edge distance hints.");
 }
 
 const unexpectedConsoleErrors = consoleErrors.filter(
@@ -177,12 +279,7 @@ if (unexpectedConsoleErrors.length > 0 || unexpectedFailedResponses.length > 0) 
   );
 }
 
-const screenshot = await send("Page.captureScreenshot", {
-  format: "png",
-  captureBeyondViewport: false,
-});
-await mkdir(dirname(screenshotPath), { recursive: true });
-await writeFile(screenshotPath, Buffer.from(screenshot.data, "base64"));
+await captureScreenshot(screenshotPath);
 
 console.log(
   JSON.stringify(
@@ -190,9 +287,18 @@ console.log(
       aiModelStatus: modelStatus,
       blockedCloudflareBeacons: consoleErrors.length - unexpectedConsoleErrors.length,
       consoleErrors: unexpectedConsoleErrors.length,
-      hardModeDistanceTables: distanceTableCount,
+      easyModeEdgeDirections: easyDistanceDirections,
+      hardModeDistanceHints: distanceHintCount,
+      startScreenshotPath,
+      boundaryTutorialScreenshotPath,
+      trappedTutorialScreenshotPath,
+      easyScreenshotPath,
       screenshotPath,
       turn: matchText.match(/第 [0-9]+ 回合/)?.[0],
+      viewport:
+        viewportWidth > 0 && viewportHeight > 0
+          ? `${viewportWidth}x${viewportHeight}`
+          : "browser-default",
       url: targetUrl,
     },
     null,
