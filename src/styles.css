@@ -1,6 +1,6 @@
 :root {
   color-scheme: light dark;
-  font-family: "Inter Variable", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-family: "Space Grotesk Variable", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   color: #191c20;
   background: #f4f5f6;
   font-synthesis: none;
@@ -206,6 +206,10 @@ button:disabled {
   background: var(--surface);
 }
 
+.game-layout:focus {
+  outline: none;
+}
+
 .playfield-region {
   display: grid;
   min-width: 0;
@@ -357,8 +361,8 @@ button:disabled {
 }
 
 .start-rail h1 {
-  max-width: 10ch;
-  font-size: clamp(34px, 3vw, 46px);
+  max-width: 100%;
+  font-size: clamp(34px, 3vw, 42px);
   letter-spacing: -0.048em;
 }
 

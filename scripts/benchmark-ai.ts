@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { createGame, type Player } from "../src/game/index.ts";
+import { applyMove, createGame, type Player } from "../src/game/index.ts";
 import {
   ValueNetwork,
   chooseMoveWithSearch,
@@ -36,6 +36,12 @@ let learnedWins = 0;
 let baselineWins = 0;
 let draws = 0;
 let totalMoves = 0;
+let learnedSearches = 0;
+let baselineSearches = 0;
+let learnedDepthTotal = 0;
+let baselineDepthTotal = 0;
+let learnedNodesTotal = 0;
+let baselineNodesTotal = 0;
 
 for (let game = 0; game < games; game += 1) {
   const learnedColor: Player = game % 2 === 0 ? "white" : "black";
@@ -50,7 +56,15 @@ for (let game = 0; game < games; game += 1) {
       maxDepth,
       seed: 31_337 + game * 1_009 + state.moveNumber,
     });
-    const { applyMove } = await import("../src/game/index.ts");
+    if (model === learned) {
+      learnedSearches += 1;
+      learnedDepthTotal += result.depth;
+      learnedNodesTotal += result.nodes;
+    } else {
+      baselineSearches += 1;
+      baselineDepthTotal += result.depth;
+      baselineNodesTotal += result.nodes;
+    }
     state = applyMove(state, result.move);
   }
 
@@ -78,6 +92,10 @@ serialized.metadata.benchmark = {
   draws,
   learnedWinRate,
   averageMoves: totalMoves / games,
+  learnedAverageDepth: learnedDepthTotal / Math.max(learnedSearches, 1),
+  baselineAverageDepth: baselineDepthTotal / Math.max(baselineSearches, 1),
+  learnedAverageNodes: learnedNodesTotal / Math.max(learnedSearches, 1),
+  baselineAverageNodes: baselineNodesTotal / Math.max(baselineSearches, 1),
   timeBudgetMs,
   maxDepth,
 };

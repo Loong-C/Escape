@@ -20,6 +20,7 @@ export function RulesDialog({ open, onClose }: RulesDialogProps) {
     <dialog
       ref={dialogRef}
       className="rules-dialog"
+      aria-labelledby="rules-dialog-title"
       onClose={onClose}
       onCancel={(event) => {
         event.preventDefault();
@@ -27,7 +28,7 @@ export function RulesDialog({ open, onClose }: RulesDialogProps) {
       }}
     >
       <div className="dialog-heading">
-        <h2>游戏规则</h2>
+        <h2 id="rules-dialog-title">游戏规则</h2>
         <button className="icon-button" type="button" onClick={onClose} aria-label="关闭规则">
           <X aria-hidden="true" />
         </button>
