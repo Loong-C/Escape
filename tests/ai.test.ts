@@ -4,9 +4,16 @@ import {
   ValueNetwork,
   chooseMoveWithSearch,
   extractFeatures,
-  strategicCandidates,
+  sampleCandidates,
 } from "../src/ai";
-import { createGame, setPost, type GameState, type Player } from "../src/game";
+import {
+  applyMove,
+  createGame,
+  listLegalMoves,
+  setPost,
+  type GameState,
+  type Player,
+} from "../src/game";
 
 function placeMany(
   state: GameState,
@@ -22,7 +29,7 @@ describe("AI foundation", () => {
   it("extracts a finite, stable feature vector", () => {
     const state = createGame();
     const features = extractFeatures(state, "white");
-    expect(features).toHaveLength(24);
+    expect(features).toHaveLength(30);
     expect(features.every(Number.isFinite)).toBe(true);
   });
 
@@ -45,9 +52,9 @@ describe("AI foundation", () => {
     expect(restored.evaluate(extractFeatures(state, "white"))).toBeCloseTo(before, 12);
   });
 
-  it("returns only legal strategic candidates", () => {
+  it("uniformly samples only legal candidates", () => {
     const state = createGame();
-    const candidates = strategicCandidates(state, 20, new SeededRandom(1));
+    const candidates = sampleCandidates(state, 20, new SeededRandom(1));
     expect(candidates).toHaveLength(20);
     expect(candidates.every((move) => move.kind === "place")).toBe(true);
   });
@@ -66,5 +73,70 @@ describe("AI foundation", () => {
       seed: 2,
     });
     expect(result.move).toMatchObject({ row: 2, col: 2 });
+  });
+
+  it.each([
+    {
+      missing: [6, 6],
+      support: [6, 7],
+      opponentPosts: [[5, 5], [5, 6], [6, 5]],
+    },
+    {
+      missing: [6, 5],
+      support: [6, 4],
+      opponentPosts: [[5, 5], [5, 6], [6, 6]],
+    },
+    {
+      missing: [5, 6],
+      support: [5, 7],
+      opponentPosts: [[5, 5], [6, 5], [6, 6]],
+    },
+    {
+      missing: [5, 5],
+      support: [5, 4],
+      opponentPosts: [[5, 6], [6, 5], [6, 6]],
+    },
+  ])("occupies and anchors an immediate enclosure point at $missing", (scenario) => {
+    const entries: Array<[number, number, Player]> = [
+      ...scenario.opponentPosts.map(
+        ([row, col]) => [row, col, "black"] as [number, number, Player],
+      ),
+      [scenario.support[0], scenario.support[1], "white"],
+    ];
+    const state = placeMany(createGame(), entries);
+    const model = new ValueNetwork(12, new SeededRandom(11));
+    const result = chooseMoveWithSearch(state, model, {
+      difficulty: "hard",
+      timeBudgetMs: 250,
+      maxDepth: 1,
+      seed: 17,
+    });
+
+    expect(result.move).toMatchObject({
+      row: scenario.missing[0],
+      col: scenario.missing[1],
+    });
+  });
+
+  it("keeps the exact enclosure defense in easy mode", () => {
+    const state = placeMany(createGame(), [
+      [5, 5, "black"],
+      [5, 6, "black"],
+      [6, 5, "black"],
+      [6, 7, "white"],
+    ]);
+    const model = new ValueNetwork(12, new SeededRandom(19));
+    const result = chooseMoveWithSearch(state, model, {
+      difficulty: "easy",
+      seed: 23,
+    });
+
+    const afterDefense = applyMove(state, result.move);
+    const opponentCanWinImmediately = listLegalMoves(afterDefense).some((move) => {
+      const reply = applyMove(afterDefense, move);
+      return reply.outcome.status === "won" && reply.outcome.winner === "black";
+    });
+
+    expect(opponentCanWinImmediately).toBe(false);
   });
 });

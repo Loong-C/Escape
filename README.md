@@ -8,9 +8,10 @@ Escape 是一款 11 × 11 的双人抽象策略游戏。玩家在交点落桩，
 
 - 六步交互教程，依次讲解落桩、浮桩与锚桩、墙、最短路径长度、球的自动移动、边界归属和封闭胜利。
 - 人机对战随机分配黑白方，白方先行。
-- 简单难度在棋盘四条边上显示落子前后的最短距离数字，不显示路径。
+- 简单难度在棋盘外的四条边显示最短距离；只有数值改变时才并列显示旧值与新值，不显示路径。
 - 困难难度隐藏距离提示，并使用更深的搜索。
-- 自我对弈强化学习价值网络，结合候选排序、迭代加深、Alpha-Beta 剪枝和置换表。
+- 当前玩家所属的两条目标边会以克制的光带提示。
+- 仅使用终局奖励的自我对弈强化学习价值网络，结合神经排序、迭代加深、Alpha-Beta 剪枝和置换表。
 - 键盘、触控、亮色、暗色与响应式布局支持。
 
 ## 本地开发
@@ -30,17 +31,18 @@ pnpm build
 
 ## AI 训练与评测
 
-模型训练使用自我对弈 Monte Carlo 回报、经验回放、Adam 优化和逐步收敛的探索率。
+模型从零开始使用自我对弈 Monte Carlo 终局回报、经验回放、Adam 优化和逐步收敛的探索率训练。每个局面同时记录行动方与等待方视角；课程从 3 × 3、5 × 5 的高密度封闭局面逐步过渡到标准 11 × 11 棋盘。
 
 ```bash
 pnpm exec tsx scripts/train-ai.ts \
-  --episodes 5000 \
-  --resume src/ai/model/escape-value.json \
-  --updates 32 \
-  --candidates 24 \
-  --checkpoint 500 \
-  --checkpoint-dir artifacts/continued-training-checkpoints \
-  --output src/ai/model/escape-value.json
+  --episodes 10000 \
+  --hidden 64 \
+  --updates 48 \
+  --candidates 32 \
+  --replay 120000 \
+  --checkpoint 1000 \
+  --checkpoint-dir artifacts/pure-rl-checkpoints \
+  --output artifacts/models/pure-rl-10000.json
 ```
 
 评测命令：
@@ -49,7 +51,7 @@ pnpm exec tsx scripts/train-ai.ts \
 pnpm benchmark:ai -- --games 40 --time 40 --depth 1 --opening-plies 4
 ```
 
-训练从原 10,000 局模型继续运行到 15,000 局，并保留每 500 局检查点。生产模型采用表现最佳的 14,000 局检查点与原模型做 25% 权重插值：在 40 局成对随机开局中以 21:19 战胜原模型，对固定规则启发式基线为 27:13。困难模式实战使用 5.2 秒预算、迭代加深和更深的 Alpha-Beta 搜索；起始局面可完成深度 4。
+训练与运行时都不使用手写局面评分或人工候选优先级。模型只学习终局胜负回报；立即获胜与“对手下一手可获胜”的处理来自穷举规则证明，不是估值加分。困难模式使用 8 秒预算，搜索叶节点只读取训练后的神经价值。
 
 训练完成后，将模型复制到 `public/ai/escape-value.json` 再构建生产版本。
 

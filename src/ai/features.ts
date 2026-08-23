@@ -3,10 +3,13 @@ import {
   countAnchoredPosts,
   countPosts,
   getDirectionalExitDistances,
+  getPost,
   getShortestEscapeInfo,
   getWallSegments,
   isPassageBlocked,
   otherPlayer,
+  walk,
+  type Cell,
   type Direction,
   type GameState,
   type Player,
@@ -37,6 +40,12 @@ export const FEATURE_NAMES = [
   "turn-control",
   "game-progress",
   "last-ball-step-alignment",
+  "shortest-first-step-count",
+  "ball-open-passage-ratio",
+  "own-ball-wall-ratio",
+  "opponent-ball-wall-ratio",
+  "reachable-cell-ratio",
+  "reachable-exit-side-ratio",
 ] as const;
 
 const HORIZONTAL_EXITS: Direction[] = ["left", "right"];
@@ -92,6 +101,58 @@ function directionAlignment(direction: Direction, player: Player): number {
     return -1;
   }
   return 0;
+}
+
+function passageWallOwner(
+  state: GameState,
+  cell: Cell,
+  direction: Direction,
+): Player | null {
+  const [first, second] =
+    direction === "up"
+      ? [
+          [cell.row, cell.col],
+          [cell.row, cell.col + 1],
+        ]
+      : direction === "right"
+        ? [
+            [cell.row, cell.col + 1],
+            [cell.row + 1, cell.col + 1],
+          ]
+        : direction === "down"
+          ? [
+              [cell.row + 1, cell.col],
+              [cell.row + 1, cell.col + 1],
+            ]
+          : [
+              [cell.row, cell.col],
+              [cell.row + 1, cell.col],
+            ];
+  const firstPost = getPost(state, first[0], first[1]);
+  return firstPost !== null && firstPost === getPost(state, second[0], second[1])
+    ? firstPost
+    : null;
+}
+
+function reachableCellRatio(state: GameState): number {
+  const visited = new Uint8Array(state.size * state.size);
+  const queue: Cell[] = [state.ball];
+  let head = 0;
+  visited[state.ball.row * state.size + state.ball.col] = 1;
+
+  while (head < queue.length) {
+    const cell = queue[head++];
+    for (const direction of DIRECTIONS) {
+      const result = walk(state, cell, direction);
+      if (!result || result.type !== "cell") continue;
+      const index = result.cell.row * state.size + result.cell.col;
+      if (visited[index]) continue;
+      visited[index] = 1;
+      queue.push(result.cell);
+    }
+  }
+
+  return queue.length / (state.size * state.size);
 }
 
 export function extractFeatures(state: GameState, perspective: Player): number[] {
@@ -167,6 +228,15 @@ export function extractFeatures(state: GameState, perspective: Player): number[]
           perspective,
         )
       : 0;
+  const localWallOwners = DIRECTIONS.map((direction) =>
+    passageWallOwner(state, state.ball, direction),
+  );
+  const ownBallWalls = localWallOwners.filter((owner) => owner === perspective).length;
+  const opponentBallWalls = localWallOwners.filter((owner) => owner === opponent).length;
+  const openBallPassages = localWallOwners.filter((owner) => owner === null).length;
+  const reachableExitSides = DIRECTIONS.filter((direction) =>
+    Number.isFinite(distances[direction]),
+  ).length;
 
   return [
     1,
@@ -193,28 +263,13 @@ export function extractFeatures(state: GameState, perspective: Player): number[]
     state.turn === perspective ? 1 : -1,
     Math.min(state.moveNumber / postScale, 1),
     lastAlignment,
+    shortest.firstSteps.length / DIRECTIONS.length,
+    openBallPassages / DIRECTIONS.length,
+    ownBallWalls / DIRECTIONS.length,
+    opponentBallWalls / DIRECTIONS.length,
+    reachableCellRatio(state),
+    reachableExitSides / DIRECTIONS.length,
   ];
-}
-
-export function heuristicValue(state: GameState, perspective: Player): number {
-  if (state.outcome.status === "won") {
-    return state.outcome.winner === perspective ? 1 : -1;
-  }
-  if (state.outcome.status === "draw") {
-    return 0;
-  }
-
-  const features = extractFeatures(state, perspective);
-  const score =
-    features[5] * 2.8 +
-    features[9] * 1.2 +
-    features[10] * 0.9 +
-    features[8] * 0.45 +
-    features[13] * 0.35 +
-    features[15] * 0.3 +
-    features[20] * 0.25 +
-    features[23] * 0.5;
-  return Math.tanh(score);
 }
 
 export function terminalValue(state: GameState, perspective: Player): number | null {

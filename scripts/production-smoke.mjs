@@ -277,6 +277,32 @@ const easyDistanceDirections = await evaluate(
 if (JSON.stringify(easyDistanceDirections) !== JSON.stringify(["down", "left", "right", "up"])) {
   throw new Error(`Easy mode edge hints are incomplete: ${JSON.stringify(easyDistanceDirections)}`);
 }
+const edgeHintLayout = await evaluate(`(() => {
+  const shell = document.querySelector('.board-shell').getBoundingClientRect();
+  const boundaryInset = shell.width * 0.104;
+  const boundary = {
+    top: shell.top + boundaryInset,
+    right: shell.right - boundaryInset,
+    bottom: shell.bottom - boundaryInset,
+    left: shell.left + boundaryInset,
+  };
+  const hints = [...document.querySelectorAll('.edge-distance')];
+  const outside = hints.every((element) => {
+    const rect = element.getBoundingClientRect();
+    const direction = element.dataset.direction;
+    if (direction === 'up') return rect.bottom < boundary.top;
+    if (direction === 'right') return rect.left > boundary.right;
+    if (direction === 'down') return rect.top > boundary.bottom;
+    return rect.right < boundary.left;
+  });
+  return {
+    outside,
+    hasArrow: hints.some((element) => /[↑→↓←›>]/.test(element.textContent)),
+  };
+})()`);
+if (!edgeHintLayout.outside || edgeHintLayout.hasArrow) {
+  throw new Error(`Edge hint layout is invalid: ${JSON.stringify(edgeHintLayout)}`);
+}
 await evaluate(`(() => {
   const board = document.querySelector('[role="application"]');
   board.focus();
@@ -323,6 +349,8 @@ console.log(
       blockedCloudflareBeacons: consoleErrors.length - unexpectedConsoleErrors.length,
       consoleErrors: unexpectedConsoleErrors.length,
       easyModeEdgeDirections: easyDistanceDirections,
+      edgeHintsOutsideBoard: edgeHintLayout.outside,
+      edgeHintsContainArrows: edgeHintLayout.hasArrow,
       hardModeDistanceHints: distanceHintCount,
       startScreenshotPath,
       distanceTutorialScreenshotPath,

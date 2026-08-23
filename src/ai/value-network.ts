@@ -10,6 +10,10 @@ export interface TrainingMetadata {
   whiteWins: number;
   blackWins: number;
   draws: number;
+  trappedWins?: number;
+  escapedWins?: number;
+  curriculum?: string;
+  boardCounts?: string;
   continuedFromEpisodes?: number;
   additionalEpisodes?: number;
   selectionBenchmark?: Record<string, number | string>;

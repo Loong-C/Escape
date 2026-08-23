@@ -1,14 +1,12 @@
 import {
   applyMove,
   getLegalMove,
-  getPost,
   listLegalMoves,
-  otherPlayer,
   type GameState,
   type LegalMove,
   type Player,
 } from "../game";
-import { extractFeatures, heuristicValue, terminalValue } from "./features";
+import { extractFeatures, terminalValue } from "./features";
 import { SeededRandom } from "./random";
 import { ValueNetwork } from "./value-network";
 
@@ -17,50 +15,10 @@ export interface RankedMove {
   state: GameState;
   score: number;
   learnedValue: number;
-  heuristicValue: number;
+  terminal: boolean;
 }
 
-function ownNeighborCount(state: GameState, move: LegalMove, player: Player): number {
-  const coordinates = [
-    [move.row - 1, move.col],
-    [move.row + 1, move.col],
-    [move.row, move.col - 1],
-    [move.row, move.col + 1],
-  ];
-  return coordinates.reduce(
-    (count, [row, col]) => count + (getPost(state, row, col) === player ? 1 : 0),
-    0,
-  );
-}
-
-function quickMovePriority(state: GameState, move: LegalMove): number {
-  const player = state.turn;
-  const opponent = otherPlayer(player);
-  const ownNeighbors = ownNeighborCount(state, move, player);
-  const opponentNeighbors = ownNeighborCount(state, move, opponent);
-  const rowDistance = Math.abs(move.row - (state.ball.row + 0.5));
-  const colDistance = Math.abs(move.col - (state.ball.col + 0.5));
-  const nearBall = Math.max(0, 5 - (rowDistance + colDistance));
-  const targetBoundary =
-    player === "white"
-      ? Math.min(move.col, state.size - move.col)
-      : Math.min(move.row, state.size - move.row);
-  const blockingBoundary =
-    player === "white"
-      ? Math.min(move.row, state.size - move.row)
-      : Math.min(move.col, state.size - move.col);
-
-  return (
-    (move.kind === "replace" ? 30 : 0) +
-    ownNeighbors * 18 +
-    opponentNeighbors * 3 +
-    nearBall * 2.5 +
-    Math.max(0, 3 - targetBoundary) * 1.5 +
-    Math.max(0, 2 - blockingBoundary)
-  );
-}
-
-export function strategicCandidates(
+export function sampleCandidates(
   state: GameState,
   limit: number,
   random: SeededRandom,
@@ -69,16 +27,7 @@ export function strategicCandidates(
   if (legalMoves.length <= limit) {
     return legalMoves;
   }
-
-  const ranked = legalMoves
-    .map((move) => ({ move, priority: quickMovePriority(state, move) + random.next() * 0.01 }))
-    .sort((left, right) => right.priority - left.priority);
-
-  const deterministicCount = Math.max(1, Math.floor(limit * 0.8));
-  const selected = ranked.slice(0, deterministicCount).map(({ move }) => move);
-  const remaining = random.shuffle(ranked.slice(deterministicCount).map(({ move }) => move));
-  selected.push(...remaining.slice(0, limit - selected.length));
-  return selected;
+  return random.shuffle(legalMoves).slice(0, limit);
 }
 
 export function rankMoves(
@@ -87,24 +36,32 @@ export function rankMoves(
   random: SeededRandom,
   candidateLimit: number,
   perspective: Player = state.turn,
+  sample = false,
 ): RankedMove[] {
-  const candidates = strategicCandidates(state, candidateLimit, random);
+  const candidates = sample
+    ? sampleCandidates(state, candidateLimit, random)
+    : listLegalMoves(state);
   const ranked = candidates.map((move) => {
     const next = applyMove(state, move);
     const terminal = terminalValue(next, perspective);
     const learned = terminal ?? model.evaluate(extractFeatures(next, perspective));
-    const heuristic = terminal ?? heuristicValue(next, perspective);
-    const tactical = next.lastMove?.shortestAfterPlacement.firstSteps.length === 1 ? 0.04 : 0;
     return {
       move,
       state: next,
       learnedValue: learned,
-      heuristicValue: heuristic,
-      score: terminal === null ? learned * 0.72 + heuristic * 0.28 + tactical : terminal * 10,
+      terminal: terminal !== null,
+      score: terminal === null ? learned : terminal * 2,
+      tieBreak: random.next(),
     };
   });
 
-  return ranked.sort((left, right) => right.score - left.score);
+  return ranked
+    .sort(
+      (left, right) =>
+        right.score - left.score || right.tieBreak - left.tieBreak,
+    )
+    .slice(0, candidateLimit)
+    .map(({ tieBreak: _tieBreak, ...entry }) => entry);
 }
 
 export function chooseExploratoryMove(
@@ -117,8 +74,15 @@ export function chooseExploratoryMove(
     temperature: number;
   },
 ): RankedMove {
-  const ranked = rankMoves(state, model, random, options.candidateLimit);
-  const immediateWin = ranked.find((entry) => entry.score >= 9.5);
+  const ranked = rankMoves(
+    state,
+    model,
+    random,
+    options.candidateLimit,
+    state.turn,
+    true,
+  );
+  const immediateWin = ranked.find((entry) => entry.score >= 1.5);
   if (immediateWin) {
     return immediateWin;
   }

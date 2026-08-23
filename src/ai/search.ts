@@ -1,6 +1,13 @@
-import { type GameState, type LegalMove, type Player } from "../game";
-import { extractFeatures, heuristicValue, terminalValue } from "./features";
-import { rankMoves } from "./policy";
+import {
+  applyMove,
+  listLegalMoves,
+  otherPlayer,
+  type GameState,
+  type LegalMove,
+  type Player,
+} from "../game";
+import { extractFeatures, terminalValue } from "./features";
+import { rankMoves, type RankedMove } from "./policy";
 import { SeededRandom } from "./random";
 import { ValueNetwork } from "./value-network";
 
@@ -50,16 +57,71 @@ function leafValue(state: GameState, model: ValueNetwork, rootPlayer: Player): n
   if (terminal !== null) {
     return terminal;
   }
-  const learned = model.evaluate(extractFeatures(state, rootPlayer));
-  const heuristic = heuristicValue(state, rootPlayer);
-  return learned * 0.82 + heuristic * 0.18;
+  return model.evaluate(extractFeatures(state, rootPlayer));
 }
 
 function branchingLimit(depth: number): number {
-  if (depth >= 4) return 7;
-  if (depth === 3) return 8;
-  if (depth === 2) return 10;
-  return 13;
+  if (depth >= 4) return 5;
+  if (depth === 3) return 6;
+  if (depth === 2) return 8;
+  return 10;
+}
+
+function immediateWinningMoves(state: GameState): LegalMove[] {
+  if (state.outcome.status !== "playing") return [];
+  const player = state.turn;
+  const wins: LegalMove[] = [];
+  for (const move of listLegalMoves(state)) {
+    const next = applyMove(state, move);
+    if (next.outcome.status === "won" && next.outcome.winner === player) {
+      wins.push(move);
+    }
+  }
+  return wins;
+}
+
+function hasImmediateWinningMove(state: GameState): boolean {
+  if (state.outcome.status !== "playing") return false;
+  const player = state.turn;
+  for (const move of listLegalMoves(state)) {
+    const next = applyMove(state, move);
+    if (next.outcome.status === "won" && next.outcome.winner === player) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function forcedDefensiveResponses(
+  state: GameState,
+  ranked: RankedMove[],
+): RankedMove[] {
+  // This is an exhaustive one-ply terminal proof. It never estimates position
+  // quality: it only removes moves when the rules demonstrate a loss next turn.
+  const opponentThreatState: GameState = {
+    ...state,
+    turn: otherPlayer(state.turn),
+  };
+  const threats = immediateWinningMoves(opponentThreatState);
+  if (threats.length === 0) return [];
+
+  const relevant = ranked.filter((entry) => {
+    if (entry.state.outcome.status !== "playing") return true;
+    const ballMoved =
+      entry.state.ball.row !== state.ball.row || entry.state.ball.col !== state.ball.col;
+    const affectsThreat = threats.some(
+      (threat) =>
+        Math.abs(entry.move.row - threat.row) + Math.abs(entry.move.col - threat.col) <= 1,
+    );
+    return ballMoved || affectsThreat;
+  });
+
+  return relevant.filter((entry) => {
+    if (entry.state.outcome.status === "won") {
+      return entry.state.outcome.winner === state.turn;
+    }
+    return !hasImmediateWinningMove(entry.state);
+  });
 }
 
 function searchNode(
@@ -124,8 +186,8 @@ function easyChoice(
   random: SeededRandom,
   startedAt: number,
 ): SearchResult {
-  const ranked = rankMoves(state, model, random, 64);
-  const immediate = ranked.find((entry) => entry.score >= 9.5);
+  const ranked = rankMoves(state, model, random, (state.size + 1) ** 2);
+  const immediate = ranked.find((entry) => entry.score >= 1.5);
   if (immediate) {
     return {
       move: immediate.move,
@@ -137,7 +199,9 @@ function easyChoice(
     };
   }
 
-  const shortlist = ranked.slice(0, Math.min(3, ranked.length));
+  const forcedResponses = forcedDefensiveResponses(state, ranked);
+  const choicePool = forcedResponses.length > 0 ? forcedResponses : ranked;
+  const shortlist = choicePool.slice(0, Math.min(3, choicePool.length));
   const weights = shortlist.map((entry, index) => Math.exp(entry.score * 3.5 - index * 0.25));
   let threshold = random.next() * weights.reduce((sum, value) => sum + value, 0);
   let selected = shortlist[0];
@@ -174,10 +238,10 @@ export function chooseMoveWithSearch(
     return easyChoice(state, model, random, startedAt);
   }
 
-  const timeBudget = options.timeBudgetMs ?? 3_600;
+  const timeBudget = options.timeBudgetMs ?? 8_000;
   const maxDepth = options.maxDepth ?? 4;
   const rootRanked = rankMoves(state, model, random, state.size < 7 ? 64 : 144);
-  const immediate = rootRanked.find((entry) => entry.score >= 9.5);
+  const immediate = rootRanked.find((entry) => entry.score >= 1.5);
   if (immediate) {
     return {
       move: immediate.move,
@@ -189,12 +253,14 @@ export function chooseMoveWithSearch(
     };
   }
 
-  let bestMove = rootRanked[0].move;
-  let bestScore = rootRanked[0].score;
+  const forcedResponses = forcedDefensiveResponses(state, rootRanked);
+  const rootPool = forcedResponses.length > 0 ? forcedResponses : rootRanked;
+  let bestMove = rootPool[0].move;
+  let bestScore = rootPool[0].score;
   let completedDepth = 1;
   let totalNodes = rootRanked.length;
   const deadline = startedAt + timeBudget;
-  const rootSearch = rootRanked.slice(0, state.size < 7 ? 48 : 28);
+  const rootSearch = rootPool.slice(0, state.size < 7 ? 24 : 12);
 
   for (let depth = 2; depth <= maxDepth; depth += 1) {
     const context: SearchContext = {

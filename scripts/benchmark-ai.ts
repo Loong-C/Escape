@@ -57,6 +57,10 @@ let learnedDepthTotal = 0;
 let opponentDepthTotal = 0;
 let learnedNodesTotal = 0;
 let opponentNodesTotal = 0;
+let learnedTrappedWins = 0;
+let learnedEscapedWins = 0;
+let opponentTrappedWins = 0;
+let opponentEscapedWins = 0;
 
 function createOpening(pair: number): GameState {
   let state = createGame();
@@ -99,8 +103,12 @@ for (let game = 0; game < games; game += 1) {
     draws += 1;
   } else if (state.outcome.winner === learnedColor) {
     learnedWins += 1;
+    if (state.outcome.reason === "trapped") learnedTrappedWins += 1;
+    else learnedEscapedWins += 1;
   } else {
     opponentWins += 1;
+    if (state.outcome.reason === "trapped") opponentTrappedWins += 1;
+    else opponentEscapedWins += 1;
   }
 
   process.stdout.write(
@@ -113,11 +121,15 @@ const learnedWinRate = decisiveGames === 0 ? 0 : learnedWins / decisiveGames;
 const benchmark = {
   opponent: opponentPath
     ? `serialized model ${basename(opponentPath)}`
-    : "fixed zero-network heuristic search baseline",
+    : "untrained zero-value rules-only search baseline",
   games,
   learnedWins,
   opponentWins,
   draws,
+  learnedTrappedWins,
+  learnedEscapedWins,
+  opponentTrappedWins,
+  opponentEscapedWins,
   learnedWinRate,
   averageMoves: totalMoves / games,
   learnedAverageDepth: learnedDepthTotal / Math.max(learnedSearches, 1),
