@@ -24,6 +24,10 @@ const movementTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-movement.png",
 );
+const movementPreviewScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-movement-preview.png",
+);
 const trappedTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-trapped.png",
@@ -178,6 +182,28 @@ for (let lesson = 0; lesson < 6; lesson += 1) {
   );
   if (!stepVisible) throw new Error(`Tutorial lesson ${lesson + 1} did not render.`);
 
+  if (lesson === 2) {
+    const beforePlacement = await evaluate(`(() => {
+      const edges = [...document.querySelectorAll('.edge-distance')];
+      return {
+        up: edges.find((element) => element.dataset.direction === 'up')?.textContent.trim(),
+        changed: edges.filter((element) => element.dataset.changed === 'true').length,
+      };
+    })()`);
+    if (beforePlacement.up !== "1" || beforePlacement.changed !== 0) {
+      throw new Error(`Tutorial distances changed before placement: ${JSON.stringify(beforePlacement)}`);
+    }
+  }
+  if (lesson === 3) {
+    const previewDirection = await evaluate(
+      `document.querySelector('[role="application"]').dataset.ballMovePreview ?? null`,
+    );
+    if (previewDirection !== "right") {
+      throw new Error(`Movement preview points in the wrong direction: ${previewDirection}`);
+    }
+    await captureScreenshot(movementPreviewScreenshotPath);
+  }
+
   await evaluate(`(() => {
     const board = document.querySelector('[role="application"]');
     board.focus();
@@ -188,16 +214,21 @@ for (let lesson = 0; lesson < 6; lesson += 1) {
   await delay(250);
 
   if (lesson === 2) {
-    const changedEdges = await evaluate(
-      `[...document.querySelectorAll('.edge-distance[data-changed="true"]')]
-        .map((element) => element.dataset.direction)`,
+    const displayedUpDistance = await evaluate(
+      `[...document.querySelectorAll('.edge-distance')]
+        .find((element) => element.dataset.direction === 'up')?.textContent.trim()`,
+    );
+    const changedEdgeCount = await evaluate(
+      `document.querySelectorAll('.edge-distance[data-changed="true"]').length`,
     );
     const shortestEdges = await evaluate(
       `[...document.querySelectorAll('.edge-distance.is-shortest')]
         .map((element) => element.dataset.direction)`,
     );
-    if (JSON.stringify(changedEdges) !== JSON.stringify(["up"])) {
-      throw new Error(`Distance tutorial changed the wrong edges: ${JSON.stringify(changedEdges)}`);
+    if (displayedUpDistance !== "2" || changedEdgeCount !== 0) {
+      throw new Error(
+        `Distance tutorial did not update on placement: ${JSON.stringify({ displayedUpDistance, changedEdgeCount })}`,
+      );
     }
     if (JSON.stringify(shortestEdges) !== JSON.stringify(["up"])) {
       throw new Error(`Distance tutorial highlighted the wrong shortest edge: ${JSON.stringify(shortestEdges)}`);
@@ -249,6 +280,15 @@ await evaluate(
 );
 await delay(400);
 let matchText = await evaluate("document.body.innerText");
+const humanGoalPlayer = matchText.includes("你执白方") ? "white" : "black";
+const renderedGoalPlayer = await evaluate(
+  `document.querySelector('[role="application"]').dataset.goalPlayer`,
+);
+if (renderedGoalPlayer !== humanGoalPlayer) {
+  throw new Error(
+    `Goal edges do not belong to the human player: ${renderedGoalPlayer}/${humanGoalPlayer}`,
+  );
+}
 if (matchText.includes("你的回合")) {
   await evaluate(`(() => {
     const board = document.querySelector('[role="application"]');
@@ -259,7 +299,7 @@ if (matchText.includes("你的回合")) {
   })()`);
 }
 
-await delay(8_000);
+await delay(15_000);
 matchText = await evaluate("document.body.innerText");
 if (matchText.includes("AI 暂时无法行动")) {
   throw new Error("AI reported a runtime error.");
@@ -362,11 +402,13 @@ console.log(
       startScreenshotPath,
       distanceTutorialScreenshotPath,
       movementTutorialScreenshotPath,
+      movementPreviewScreenshotPath,
       boundaryTutorialScreenshotPath,
       trappedTutorialScreenshotPath,
       easyScreenshotPath,
       screenshotPath,
       turn: matchText.match(/第 [0-9]+ 回合/)?.[0],
+      humanGoalPlayer,
       viewport:
         viewportWidth > 0 && viewportHeight > 0
           ? `${viewportWidth}x${viewportHeight}`

@@ -79,6 +79,7 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
               : null
           }
           highlightShortestDistances={lesson.showDistances}
+          showBallMovePreview={lessonIndex === 3 && !completed}
           interactive={!completed}
           canSelect={(move) =>
             !completed && move.row === lesson.target.row && move.col === lesson.target.col

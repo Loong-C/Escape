@@ -190,6 +190,11 @@ export function BoardCanvas({
       className="board-shell"
       role="application"
       tabIndex={interactive ? 0 : -1}
+      data-goal-player={goalPlayer}
+      data-turn={state.turn}
+      data-ball-move-preview={
+        showBallMovePreview ? movePreview?.ballWillMove ?? undefined : undefined
+      }
       aria-label={
         interactive
           ? `Escape 棋盘。${goalDescription}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列${movementDescription}。`
