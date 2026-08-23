@@ -142,6 +142,13 @@ if (viewportWidth > 0 && viewportHeight > 0) {
     deviceScaleFactor: 1,
     mobile: true,
   });
+} else {
+  await send("Emulation.setDeviceMetricsOverride", {
+    width: 1440,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
 }
 const loaded = once("Page.loadEventFired", 45_000);
 await send("Page.navigate", { url: targetUrl });
@@ -363,7 +370,7 @@ console.log(
       viewport:
         viewportWidth > 0 && viewportHeight > 0
           ? `${viewportWidth}x${viewportHeight}`
-          : "browser-default",
+          : "1440x900 desktop",
       url: targetUrl,
     },
     null,
