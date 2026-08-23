@@ -1,7 +1,14 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
-import { applyMove, createGame, type Player } from "../src/game/index.ts";
 import {
+  applyMove,
+  createGame,
+  listLegalMoves,
+  type GameState,
+  type Player,
+} from "../src/game/index.ts";
+import {
+  SeededRandom,
   ValueNetwork,
   chooseMoveWithSearch,
   type SerializedValueNetwork,
@@ -20,6 +27,7 @@ function stringArgument(name: string, fallback: string): string {
 const games = numberArgument("games", 40);
 const timeBudgetMs = numberArgument("time", 90);
 const maxDepth = numberArgument("depth", 2);
+const openingPlies = numberArgument("opening-plies", 0);
 const modelPath = stringArgument(
   "model",
   resolve(process.cwd(), "src/ai/model/escape-value.json"),
@@ -50,9 +58,20 @@ let opponentDepthTotal = 0;
 let learnedNodesTotal = 0;
 let opponentNodesTotal = 0;
 
+function createOpening(pair: number): GameState {
+  let state = createGame();
+  const random = new SeededRandom(91_337 + pair * 65_537);
+  for (let ply = 0; ply < openingPlies && state.outcome.status === "playing"; ply += 1) {
+    const legalMoves = listLegalMoves(state);
+    state = applyMove(state, legalMoves[random.integer(legalMoves.length)]);
+  }
+  return state;
+}
+
 for (let game = 0; game < games; game += 1) {
   const learnedColor: Player = game % 2 === 0 ? "white" : "black";
-  let state = createGame();
+  const pair = Math.floor(game / 2);
+  let state = createOpening(pair);
   const moveLimit = (state.size + 1) * (state.size + 1) + 40;
 
   while (state.outcome.status === "playing" && state.moveNumber < moveLimit) {
@@ -61,7 +80,7 @@ for (let game = 0; game < games; game += 1) {
       difficulty: "hard",
       timeBudgetMs,
       maxDepth,
-      seed: 31_337 + game * 1_009 + state.moveNumber,
+      seed: 31_337 + pair * 1_009 + state.moveNumber,
     });
     if (model === learned) {
       learnedSearches += 1;
@@ -91,7 +110,7 @@ for (let game = 0; game < games; game += 1) {
 
 const decisiveGames = learnedWins + opponentWins;
 const learnedWinRate = decisiveGames === 0 ? 0 : learnedWins / decisiveGames;
-serialized.metadata.benchmark = {
+const benchmark = {
   opponent: opponentPath
     ? `serialized model ${basename(opponentPath)}`
     : "fixed zero-network heuristic search baseline",
@@ -107,7 +126,13 @@ serialized.metadata.benchmark = {
   opponentAverageNodes: opponentNodesTotal / Math.max(opponentSearches, 1),
   timeBudgetMs,
   maxDepth,
+  openingPlies,
 };
+if (opponentPath) {
+  serialized.metadata.selectionBenchmark = benchmark;
+} else {
+  serialized.metadata.benchmark = benchmark;
+}
 await writeFile(modelPath, `${JSON.stringify(serialized, null, 2)}\n`);
 
 process.stdout.write(

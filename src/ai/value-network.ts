@@ -12,6 +12,7 @@ export interface TrainingMetadata {
   draws: number;
   continuedFromEpisodes?: number;
   additionalEpisodes?: number;
+  selectionBenchmark?: Record<string, number | string>;
   benchmark?: Record<string, number | string>;
 }
 

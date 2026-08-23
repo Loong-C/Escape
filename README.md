@@ -34,20 +34,22 @@ pnpm build
 
 ```bash
 pnpm exec tsx scripts/train-ai.ts \
-  --episodes 10000 \
+  --episodes 5000 \
+  --resume src/ai/model/escape-value.json \
   --updates 32 \
   --candidates 24 \
   --checkpoint 500 \
+  --checkpoint-dir artifacts/continued-training-checkpoints \
   --output src/ai/model/escape-value.json
 ```
 
 评测命令：
 
 ```bash
-pnpm benchmark:ai -- --games 40 --time 40 --depth 1
+pnpm benchmark:ai -- --games 40 --time 40 --depth 1 --opening-plies 4
 ```
 
-随生产版本发布的模型完成了 10,000 局自我对弈训练。固定种子验收中，模型与规则启发式基线拥有相同的一层搜索和每步 40 ms 预算，轮换先后手进行 40 局，结果为 40 胜、0 负、0 和。困难模式实战另使用更长预算和迭代加深搜索。
+训练从原 10,000 局模型继续运行到 15,000 局，并保留每 500 局检查点。生产模型采用表现最佳的 14,000 局检查点与原模型做 25% 权重插值：在 40 局成对随机开局中以 21:19 战胜原模型，对固定规则启发式基线为 27:13。困难模式实战使用 5.2 秒预算、迭代加深和更深的 Alpha-Beta 搜索；起始局面可完成深度 4。
 
 训练完成后，将模型复制到 `public/ai/escape-value.json` 再构建生产版本。
 
