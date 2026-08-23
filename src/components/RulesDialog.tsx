@@ -1,0 +1,69 @@
+import { X } from "@phosphor-icons/react";
+import { useEffect, useRef } from "react";
+
+interface RulesDialogProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function RulesDialog({ open, onClose }: RulesDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="rules-dialog"
+      onClose={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
+      <div className="dialog-heading">
+        <h2>游戏规则</h2>
+        <button className="icon-button" type="button" onClick={onClose} aria-label="关闭规则">
+          <X aria-hidden="true" />
+        </button>
+      </div>
+      <div className="rules-content">
+        <section>
+          <h3>目标</h3>
+          <p>白方让球从左边或右边离开棋盘，黑方让球从上边或下边离开棋盘。</p>
+        </section>
+        <section>
+          <h3>桩与墙</h3>
+          <p>桩放在方格交点。相邻的同色桩立即形成墙，球不能穿过墙。</p>
+          <p>未参与墙的桩是浮桩，参与至少一段墙的桩是锚桩。</p>
+        </section>
+        <section>
+          <h3>替换</h3>
+          <p>可以用自己的桩替换对方浮桩，但替换后必须立刻与已有己方桩形成墙。锚桩不能替换。</p>
+        </section>
+        <section>
+          <h3>球的移动</h3>
+          <p>每次落桩后计算全部最短逃生路线。如果这些路线的第一步全部相同，球向该方向移动一格，否则不移动。</p>
+          <p>每回合最多移动一格，越过边界的一步计入路径长度。</p>
+        </section>
+        <section>
+          <h3>胜负</h3>
+          <p>球从左右边界离开时白方获胜，从上下边界离开时黑方获胜。落桩后完全封死球的一方立即获胜。</p>
+          <p>轮到一方时没有任何合法落子或替换位置，游戏和棋。</p>
+        </section>
+        <section>
+          <h3>难度</h3>
+          <p>简单模式显示落子前后四个方向的最短逃生长度。困难模式不显示这些数字。</p>
+        </section>
+      </div>
+      <button className="primary-button dialog-confirm" type="button" onClick={onClose}>
+        知道了
+      </button>
+    </dialog>
+  );
+}
