@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AiDifficulty } from "./ai";
 import { AppHeader } from "./components/AppHeader";
-import { MatchScreen } from "./components/MatchScreen";
+import { MatchScreen, type MatchMode } from "./components/MatchScreen";
 import { RulesDialog } from "./components/RulesDialog";
 import { StartScreen } from "./components/StartScreen";
 import { TutorialScreen } from "./components/TutorialScreen";
@@ -10,6 +10,7 @@ type Screen = "start" | "tutorial" | "match";
 
 export function App() {
   const [screen, setScreen] = useState<Screen>("start");
+  const [matchMode, setMatchMode] = useState<MatchMode>("ai");
   const [difficulty, setDifficulty] = useState<AiDifficulty>("easy");
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -19,7 +20,14 @@ export function App() {
     }
   }, [screen]);
 
-  const context = screen === "start" ? "逃脱" : screen === "tutorial" ? "新手教程" : "人机对战";
+  const context =
+    screen === "start"
+      ? "逃脱"
+      : screen === "tutorial"
+        ? "新手教程"
+        : matchMode === "local"
+          ? "本地双人"
+          : "人机对战";
 
   return (
     <div className="app-shell">
@@ -35,7 +43,10 @@ export function App() {
           difficulty={difficulty}
           onDifficultyChange={setDifficulty}
           onTutorial={() => setScreen("tutorial")}
-          onMatch={() => setScreen("match")}
+          onMatch={(mode) => {
+            setMatchMode(mode);
+            setScreen("match");
+          }}
         />
       )}
       {screen === "tutorial" && (
@@ -43,12 +54,14 @@ export function App() {
           onHome={() => setScreen("start")}
           onStartMatch={(nextDifficulty) => {
             setDifficulty(nextDifficulty);
+            setMatchMode("ai");
             setScreen("match");
           }}
         />
       )}
       {screen === "match" && (
         <MatchScreen
+          mode={matchMode}
           difficulty={difficulty}
           onDifficultyChange={setDifficulty}
           onHome={() => setScreen("start")}

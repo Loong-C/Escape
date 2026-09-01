@@ -276,17 +276,68 @@ await delay(300);
 
 await evaluate(
   `[...document.querySelectorAll("button")]
+    .find((button) => button.textContent.trim() === "开始本地双人").click()`,
+);
+await delay(400);
+const localInitialState = await evaluate(`(() => {
+  const board = document.querySelector('[role="application"]');
+  return {
+    goalPlayer: board?.dataset.goalPlayer,
+    turn: board?.dataset.turn,
+    hasPlayerOneTurn: document.body.innerText.includes("玩家 1 的回合"),
+  };
+})()`);
+if (
+  localInitialState.goalPlayer !== "white" ||
+  localInitialState.turn !== "white" ||
+  !localInitialState.hasPlayerOneTurn
+) {
+  throw new Error(`Local match did not start with white: ${JSON.stringify(localInitialState)}`);
+}
+await evaluate(`(() => {
+  const board = document.querySelector('[role="application"]');
+  board.focus();
+  board.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "Enter", code: "Enter", bubbles: true
+  }));
+})()`);
+await delay(300);
+const localNextState = await evaluate(`(() => {
+  const board = document.querySelector('[role="application"]');
+  return {
+    goalPlayer: board?.dataset.goalPlayer,
+    turn: board?.dataset.turn,
+    hasPlayerTwoTurn: document.body.innerText.includes("玩家 2 的回合"),
+  };
+})()`);
+if (
+  localNextState.goalPlayer !== "black" ||
+  localNextState.turn !== "black" ||
+  !localNextState.hasPlayerTwoTurn
+) {
+  throw new Error(`Local match did not switch players and goal edges: ${JSON.stringify(localNextState)}`);
+}
+await evaluate(
+  `[...document.querySelectorAll("button")]
+    .find((button) => button.textContent.trim() === "退出对局").click()`,
+);
+await delay(300);
+
+await evaluate(
+  `[...document.querySelectorAll("button")]
     .find((button) => button.textContent.trim() === "开始人机对战").click()`,
 );
 await delay(400);
 let matchText = await evaluate("document.body.innerText");
-const humanGoalPlayer = matchText.includes("你执白方") ? "white" : "black";
+const currentTurn = await evaluate(
+  `document.querySelector('[role="application"]').dataset.turn`,
+);
 const renderedGoalPlayer = await evaluate(
   `document.querySelector('[role="application"]').dataset.goalPlayer`,
 );
-if (renderedGoalPlayer !== humanGoalPlayer) {
+if (renderedGoalPlayer !== currentTurn) {
   throw new Error(
-    `Goal edges do not belong to the human player: ${renderedGoalPlayer}/${humanGoalPlayer}`,
+    `Goal edges do not belong to the current player: ${renderedGoalPlayer}/${currentTurn}`,
   );
 }
 if (matchText.includes("你的回合")) {
@@ -408,7 +459,9 @@ console.log(
       easyScreenshotPath,
       screenshotPath,
       turn: matchText.match(/第 [0-9]+ 回合/)?.[0],
-      humanGoalPlayer,
+      currentTurn,
+      localInitialState,
+      localNextState,
       viewport:
         viewportWidth > 0 && viewportHeight > 0
           ? `${viewportWidth}x${viewportHeight}`

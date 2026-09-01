@@ -1,5 +1,6 @@
 import type { AiDifficulty } from "../ai";
 import { createHomeBoard } from "../game/presets";
+import type { MatchMode } from "./MatchScreen";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 import { DifficultySwitch } from "./DifficultySwitch";
 import { EscapeLogo } from "./EscapeLogo";
@@ -8,7 +9,7 @@ interface StartScreenProps {
   difficulty: AiDifficulty;
   onDifficultyChange: (difficulty: AiDifficulty) => void;
   onTutorial: () => void;
-  onMatch: () => void;
+  onMatch: (mode: MatchMode) => void;
 }
 
 const HOME_BOARD = createHomeBoard();
@@ -45,13 +46,16 @@ export function StartScreen({
           <p className="option-note">
             {difficulty === "easy"
               ? "显示棋盘外的四边距离与球的下一步预览。"
-              : "不显示距离与移动预览，AI 强度与简易模式相同。"}
+              : "不显示距离与移动预览；人机模式的 AI 强度与简易模式相同。"}
           </p>
         </section>
 
         <div className="start-actions">
-          <button className="primary-button" type="button" onClick={onMatch}>
+          <button className="primary-button" type="button" onClick={() => onMatch("ai")}>
             开始人机对战
+          </button>
+          <button className="secondary-button" type="button" onClick={() => onMatch("local")}>
+            开始本地双人
           </button>
           <button className="secondary-button" type="button" onClick={onTutorial}>
             新手教程

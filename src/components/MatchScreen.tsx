@@ -17,10 +17,13 @@ import { DifficultySwitch } from "./DifficultySwitch";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 
 interface MatchScreenProps {
+  mode: MatchMode;
   difficulty: AiDifficulty;
   onDifficultyChange: (difficulty: AiDifficulty) => void;
   onHome: () => void;
 }
+
+export type MatchMode = "ai" | "local";
 
 const PLAYER_NAMES: Record<Player, string> = { white: "白方", black: "黑方" };
 const DIRECTION_NAMES: Record<Direction, string> = {
@@ -60,6 +63,7 @@ function describeLastMove(state: GameState): string {
 }
 
 export function MatchScreen({
+  mode,
   difficulty,
   onDifficultyChange,
   onHome,
@@ -76,9 +80,11 @@ export function MatchScreen({
   const pendingMoveNumber = useRef<number | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const requestAiMove = useAiWorker();
+  const requestAiMove = useAiWorker(mode === "ai");
   const aiColor = humanColor === "white" ? "black" : "white";
-  const humanTurn = state.outcome.status === "playing" && state.turn === humanColor;
+  const localMatch = mode === "local";
+  const humanTurn =
+    state.outcome.status === "playing" && (localMatch || state.turn === humanColor);
   const coarsePointer = useMemo(
     () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
     [],
@@ -86,6 +92,7 @@ export function MatchScreen({
 
   useEffect(() => {
     if (
+      localMatch ||
       state.outcome.status !== "playing" ||
       state.turn !== aiColor ||
       aiError !== null ||
@@ -127,7 +134,7 @@ export function MatchScreen({
         }
         setAiThinking(false);
       });
-  }, [aiColor, aiError, aiRetryToken, difficulty, requestAiMove, state]);
+  }, [aiColor, aiError, aiRetryToken, difficulty, localMatch, requestAiMove, state]);
 
   useEffect(() => {
     setFocusedMove(null);
@@ -160,7 +167,9 @@ export function MatchScreen({
   function restart(): void {
     pendingMoveNumber.current = null;
     setState(createGame());
-    setHumanColor(randomHumanColor());
+    if (!localMatch) {
+      setHumanColor(randomHumanColor());
+    }
     setFocusedMove(null);
     setAiError(null);
     setSearchStats(null);
@@ -175,9 +184,11 @@ export function MatchScreen({
     state.outcome.status === "draw"
       ? "和棋"
       : state.outcome.status === "won"
-        ? state.outcome.winner === humanColor
-          ? "你获胜"
-          : "AI 获胜"
+        ? localMatch
+          ? `${PLAYER_NAMES[state.outcome.winner]}获胜`
+          : state.outcome.winner === humanColor
+            ? "你获胜"
+            : "AI 获胜"
         : null;
 
   return (
@@ -186,7 +197,7 @@ export function MatchScreen({
         <LazyBoardCanvas
           state={state}
           focusedMove={focusedMove}
-          goalPlayer={humanColor}
+          goalPlayer={state.turn}
           distanceHints={distanceHints}
           showBallMovePreview={difficulty === "easy"}
           interactive={humanTurn && !aiThinking}
@@ -206,15 +217,29 @@ export function MatchScreen({
             <i className={`player-piece player-piece--${state.turn}`} aria-hidden="true" />
             <div>
               <strong>{PLAYER_NAMES[state.turn]}</strong>
-              <span>{state.turn === humanColor ? "你的回合" : aiThinking ? "AI 正在计算" : "AI 回合"}</span>
+              <span>
+                {localMatch
+                  ? state.turn === "white"
+                    ? "玩家 1 的回合"
+                    : "玩家 2 的回合"
+                  : state.turn === humanColor
+                    ? "你的回合"
+                    : aiThinking
+                      ? "AI 正在计算"
+                      : "AI 回合"}
+              </span>
             </div>
           </div>
-          <p className="role-note">你执{PLAYER_NAMES[humanColor]}，AI 执{PLAYER_NAMES[aiColor]}。</p>
+          <p className="role-note">
+            {localMatch
+              ? "玩家 1 执白方（左右边界），玩家 2 执黑方（上下边界）。"
+              : `你执${PLAYER_NAMES[humanColor]}，AI 执${PLAYER_NAMES[aiColor]}。`}
+          </p>
         </section>
 
         <section className="match-difficulty">
           <div className="section-heading">
-            <h2 id="match-difficulty-heading">难度</h2>
+            <h2 id="match-difficulty-heading">{localMatch ? "提示" : "难度"}</h2>
           </div>
           <DifficultySwitch
             value={difficulty}

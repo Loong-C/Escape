@@ -13,12 +13,16 @@ export interface AiTurnResult {
   stats: Omit<SearchResult, "move">;
 }
 
-export function useAiWorker() {
+export function useAiWorker(enabled = true) {
   const workerRef = useRef<Worker | null>(null);
   const nextRequestId = useRef(1);
   const pending = useRef(new Map<number, PendingRequest>());
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     const worker = new Worker(new URL("../ai/ai.worker.ts", import.meta.url), {
       type: "module",
     });
@@ -49,7 +53,7 @@ export function useAiWorker() {
       }
       pending.current.clear();
     };
-  }, []);
+  }, [enabled]);
 
   return useCallback((state: GameState, difficulty: AiDifficulty) => {
     const worker = workerRef.current;

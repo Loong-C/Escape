@@ -143,7 +143,9 @@ export function BoardCanvas({
   ]);
 
   const goalDescription =
-    goalPlayer === "white" ? "玩家目标为左右边界" : "玩家目标为上下边界";
+    goalPlayer === "white"
+      ? "当前行动方的目标边界为左右两侧"
+      : "当前行动方的目标边界为上下两侧";
   const movementDescription =
     showBallMovePreview && movePreview?.ballWillMove
       ? `。确认后球将向${
