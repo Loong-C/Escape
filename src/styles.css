@@ -742,7 +742,7 @@ button:disabled {
 }
 
 .mobile-confirm {
-  display: none;
+  display: inline-flex;
   margin: 14px 0 0;
 }
 
@@ -962,10 +962,6 @@ button:disabled {
 
   .tutorial-progress li {
     font-size: 9px;
-  }
-
-  .mobile-confirm {
-    display: inline-flex;
   }
 
   .rules-dialog {

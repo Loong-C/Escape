@@ -164,6 +164,13 @@ export function MatchScreen({
     commitMove(move);
   }
 
+  function handleHover(move: Move | null): void {
+    // Touch pointers emit pointerout immediately after a tap. Keep the selected
+    // intersection stable so the second tap or confirm button can commit it.
+    if (coarsePointer && move === null) return;
+    setFocusedMove(move);
+  }
+
   function restart(): void {
     pendingMoveNumber.current = null;
     setState(createGame());
@@ -202,7 +209,7 @@ export function MatchScreen({
           showBallMovePreview={difficulty === "easy"}
           interactive={humanTurn && !aiThinking}
           canSelect={(move) => humanTurn && !aiThinking && getLegalMove(state, move) !== null}
-          onHover={(move) => setFocusedMove(move)}
+          onHover={handleHover}
           onSelect={handleSelect}
         />
       </section>

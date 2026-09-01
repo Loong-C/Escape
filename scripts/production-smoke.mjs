@@ -6,6 +6,7 @@ const targetUrl =
   process.argv[3] ?? "https://linkukai.com/games/Escape/?qa=production-smoke";
 const viewportWidth = Number(process.argv[5] ?? 0);
 const viewportHeight = Number(process.argv[6] ?? 0);
+const mobileViewport = viewportWidth > 0 && viewportHeight > 0;
 const screenshotPath = resolve(
   process.cwd(),
   process.argv[4] ?? "artifacts/screenshots/production-cdp.png",
@@ -133,18 +134,33 @@ async function captureScreenshot(path) {
   await writeFile(path, Buffer.from(screenshot.data, "base64"));
 }
 
+async function tap(x, y) {
+  await send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y, radiusX: 1, radiusY: 1, force: 1, id: 1 }],
+  });
+  await send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+}
+
 await Promise.all([
   send("Page.enable"),
   send("Runtime.enable"),
   send("Log.enable"),
   send("Network.enable"),
 ]);
-if (viewportWidth > 0 && viewportHeight > 0) {
+if (mobileViewport) {
   await send("Emulation.setDeviceMetricsOverride", {
     width: viewportWidth,
     height: viewportHeight,
     deviceScaleFactor: 1,
     mobile: true,
+  });
+  await send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 5,
   });
 } else {
   await send("Emulation.setDeviceMetricsOverride", {
@@ -294,13 +310,37 @@ if (
 ) {
   throw new Error(`Local match did not start with white: ${JSON.stringify(localInitialState)}`);
 }
-await evaluate(`(() => {
-  const board = document.querySelector('[role="application"]');
-  board.focus();
-  board.dispatchEvent(new KeyboardEvent("keydown", {
-    key: "Enter", code: "Enter", bubbles: true
-  }));
-})()`);
+let touchSelection = null;
+if (mobileViewport) {
+  const touchPoint = await evaluate(`(() => {
+    const rect = document.querySelector('[role="application"]').getBoundingClientRect();
+    return {
+      x: rect.left + rect.width * 0.104,
+      y: rect.top + rect.height * 0.104,
+    };
+  })()`);
+  await tap(touchPoint.x, touchPoint.y);
+  await delay(250);
+  touchSelection = await evaluate(`(() => {
+    const confirm = document.querySelector('.mobile-confirm');
+    return {
+      turn: document.querySelector('[role="application"]')?.dataset.turn,
+      confirmVisible: Boolean(confirm && confirm.getBoundingClientRect().height > 0),
+    };
+  })()`);
+  if (touchSelection.turn !== "white" || !touchSelection.confirmVisible) {
+    throw new Error(`Touch selection did not remain available: ${JSON.stringify(touchSelection)}`);
+  }
+  await evaluate(`document.querySelector('.mobile-confirm').click()`);
+} else {
+  await evaluate(`(() => {
+    const board = document.querySelector('[role="application"]');
+    board.focus();
+    board.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "Enter", code: "Enter", bubbles: true
+    }));
+  })()`);
+}
 await delay(300);
 const localNextState = await evaluate(`(() => {
   const board = document.querySelector('[role="application"]');
@@ -462,8 +502,9 @@ console.log(
       currentTurn,
       localInitialState,
       localNextState,
+      touchSelection,
       viewport:
-        viewportWidth > 0 && viewportHeight > 0
+        mobileViewport
           ? `${viewportWidth}x${viewportHeight}`
           : "1440x900 desktop",
       url: targetUrl,
