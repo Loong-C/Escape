@@ -191,7 +191,17 @@ await evaluate(
   `[...document.querySelectorAll("button")]
     .find((button) => button.textContent.trim() === "新手教程").click()`,
 );
-await delay(350);
+let tutorialBoardReady = false;
+for (let attempt = 0; attempt < 40; attempt += 1) {
+  tutorialBoardReady = await evaluate(
+    `Boolean(document.querySelector('[role="application"]'))`,
+  );
+  if (tutorialBoardReady) break;
+  await delay(250);
+}
+if (!tutorialBoardReady) {
+  throw new Error("Tutorial board did not finish loading.");
+}
 for (let lesson = 0; lesson < 6; lesson += 1) {
   const stepVisible = await evaluate(
     `document.body.innerText.includes("${lesson + 1} / 6")`,
