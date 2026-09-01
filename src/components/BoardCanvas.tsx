@@ -20,6 +20,8 @@ export interface BoardDistanceHints {
   after: DirectionalDistances | null;
 }
 
+export type BoardInputSource = "pointer" | "keyboard";
+
 export interface BoardCanvasProps {
   state: GameState;
   focusedMove: Move | null;
@@ -31,7 +33,7 @@ export interface BoardCanvasProps {
   interactive: boolean;
   canSelect?: (move: Move) => boolean;
   onHover: (move: Move | null) => void;
-  onSelect: (move: Move) => void;
+  onSelect: (move: Move, source: BoardInputSource) => void;
 }
 
 function useDarkScheme(): boolean {
@@ -86,7 +88,7 @@ export function BoardCanvas({
 
     const scene = new EscapeBoardScene({
       onHover: (move) => callbacksRef.current.onHover(move),
-      onSelect: (move) => callbacksRef.current.onSelect(move),
+      onSelect: (move) => callbacksRef.current.onSelect(move, "pointer"),
     });
     sceneRef.current = scene;
     gameRef.current = new Phaser.Game({
@@ -183,7 +185,7 @@ export function BoardCanvas({
 
     if ((event.key === "Enter" || event.key === " ") && selectable(current)) {
       event.preventDefault();
-      onSelect(current);
+      onSelect(current, "keyboard");
     }
   }
 

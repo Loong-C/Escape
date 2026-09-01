@@ -13,6 +13,7 @@ import {
   type Player,
 } from "../game";
 import { useAiWorker } from "../hooks/useAiWorker";
+import type { BoardInputSource } from "./BoardCanvas";
 import { DifficultySwitch } from "./DifficultySwitch";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 
@@ -156,8 +157,12 @@ export function MatchScreen({
     setFocusedMove(null);
   }
 
-  function handleSelect(move: Move): void {
-    if (coarsePointer && (focusedMove?.row !== move.row || focusedMove.col !== move.col)) {
+  function handleSelect(move: Move, source: BoardInputSource): void {
+    if (
+      source === "pointer" &&
+      coarsePointer &&
+      (focusedMove?.row !== move.row || focusedMove.col !== move.col)
+    ) {
       setFocusedMove(move);
       return;
     }
