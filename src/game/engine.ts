@@ -317,6 +317,31 @@ export function getDirectionalExitDistances(
   return result;
 }
 
+export function getNeighborEscapeDistances(
+  state: GameState,
+  from: Cell = state.ball,
+): DirectionalDistances {
+  const exitDistances = nearestExitDistances(state);
+  const result: DirectionalDistances = {
+    up: Number.POSITIVE_INFINITY,
+    right: Number.POSITIVE_INFINITY,
+    down: Number.POSITIVE_INFINITY,
+    left: Number.POSITIVE_INFINITY,
+  };
+
+  for (const direction of DIRECTIONS) {
+    const step = walk(state, from, direction);
+    if (step?.type === "outside") {
+      result[direction] = 0;
+    } else if (step?.type === "cell") {
+      result[direction] =
+        exitDistances[cellIndex(state.size, step.cell.row, step.cell.col)];
+    }
+  }
+
+  return result;
+}
+
 export function getShortestEscapeInfo(state: GameState): ShortestEscapeInfo {
   const exitDistances = nearestExitDistances(state);
   const distance = exitDistances[cellIndex(state.size, state.ball.row, state.ball.col)];
@@ -352,9 +377,9 @@ export function previewMove(state: GameState, move: Move): MovePreview | null {
     return null;
   }
 
-  const before = getDirectionalExitDistances(state);
+  const before = getNeighborEscapeDistances(state);
   const afterState = stateAfterPost(state, legalMove);
-  const afterPlacement = getDirectionalExitDistances(afterState);
+  const afterPlacement = getNeighborEscapeDistances(afterState);
   const shortestAfterPlacement = getShortestEscapeInfo(afterState);
 
   return {
@@ -382,7 +407,7 @@ export function applyMove(state: GameState, move: Move): GameState {
 
   const ballBefore = { ...state.ball };
   let nextState = stateAfterPost(state, legalMove);
-  const distancesAfterPlacement = getDirectionalExitDistances(nextState);
+  const distancesAfterPlacement = getNeighborEscapeDistances(nextState);
   const shortestAfterPlacement = getShortestEscapeInfo(nextState);
   let ballAfter: Cell | null = { ...ballBefore };
   let escapedThrough: Direction | null = null;

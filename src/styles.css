@@ -273,7 +273,7 @@ button:disabled {
   display: block;
 }
 
-.edge-distances {
+.neighbor-distances {
   position: absolute;
   z-index: 2;
   inset: 0;
@@ -281,66 +281,43 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.edge-distance {
+.neighbor-distance {
   position: absolute;
   display: inline-flex;
-  min-width: 32px;
-  min-height: 25px;
+  min-width: 30px;
+  min-height: 23px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 2px 5px;
+  gap: 4px;
+  padding: 2px 4px;
   border: 1px solid var(--border-strong);
   border-radius: 3px;
   color: var(--text);
-  background: var(--rail);
+  background: color-mix(in srgb, var(--rail) 92%, transparent);
   font-size: clamp(10px, 1.1vw, 13px);
   font-weight: 590;
   line-height: 1;
   box-shadow: 0 2px 7px rgb(13 18 28 / 0.08);
+  transform: translate(-50%, -50%);
   transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
 }
 
-.edge-distance[data-direction="up"] {
-  top: 5.2%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.edge-distance[data-direction="right"] {
-  top: 50%;
-  right: 5.2%;
-  transform: translate(50%, -50%);
-}
-
-.edge-distance[data-direction="down"] {
-  bottom: 5.2%;
-  left: 50%;
-  transform: translate(-50%, 50%);
-}
-
-.edge-distance[data-direction="left"] {
-  top: 50%;
-  left: 5.2%;
-  transform: translate(-50%, -50%);
-}
-
-.edge-distance__previous {
+.neighbor-distance__previous {
   color: var(--subtle);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
 
-.edge-distance strong {
+.neighbor-distance strong {
   font: inherit;
 }
 
-.edge-distance strong.is-changed {
+.neighbor-distance strong.is-changed {
   color: var(--accent);
   font-weight: 720;
 }
 
-.edge-distance.is-shortest {
+.neighbor-distance.is-shortest {
   border-color: var(--accent);
   color: var(--accent);
   box-shadow:
@@ -944,7 +921,7 @@ button:disabled {
     height: 60px;
   }
 
-  .edge-distance {
+  .neighbor-distance {
     min-width: 28px;
     min-height: 22px;
     gap: 4px;

@@ -5,6 +5,7 @@ import {
   createGame,
   getDirectionalExitDistances,
   getLegalMove,
+  getNeighborEscapeDistances,
   getShortestEscapeInfo,
   getWallSegments,
   isAnchored,
@@ -136,15 +137,31 @@ describe("Escape rules engine", () => {
     expect(distances.left).toBe(5);
   });
 
+  it("reports shortest escape lengths from the four neighboring positions", () => {
+    let state = placeMany(createGame(3), [
+      [1, 1, "white"],
+      [1, 2, "white"],
+    ]);
+    expect(getNeighborEscapeDistances(state)).toEqual({
+      up: Number.POSITIVE_INFINITY,
+      right: 1,
+      down: 1,
+      left: 1,
+    });
+
+    state = { ...createGame(3), ball: { row: 1, col: 2 } };
+    expect(getNeighborEscapeDistances(state).right).toBe(0);
+  });
+
   it("shows before and hypothetical after-placement lengths without drawing a path", () => {
     const state = createGame(3);
     const preview = previewMove(state, { row: 0, col: 0 });
-    expect(preview?.before).toEqual({ up: 2, right: 2, down: 2, left: 2 });
+    expect(preview?.before).toEqual({ up: 1, right: 1, down: 1, left: 1 });
     expect(preview?.afterPlacement).toEqual({
-      up: 2,
-      right: 2,
-      down: 2,
-      left: 2,
+      up: 1,
+      right: 1,
+      down: 1,
+      left: 1,
     });
   });
 

@@ -11,6 +11,7 @@ import {
 export const TUTORIAL_LABELS = [
   "放置桩",
   "形成墙",
+  "替换浮桩",
   "最短路径长度",
   "推动球",
   "边界胜负",
@@ -42,6 +43,13 @@ function distanceLessonState(): GameState {
     ...setPost(createGame(), 0, 5, "white"),
     ball: { row: 0, col: 5 },
   };
+}
+
+function replacementLessonState(): GameState {
+  return placeMany(createGame(), [
+    [5, 4, "white"],
+    [5, 5, "black"],
+  ]);
 }
 
 function movementLessonState(): GameState {
@@ -95,10 +103,19 @@ export function createTutorialLessons(): TutorialLesson[] {
       showDistances: false,
     },
     {
+      label: "替换浮桩",
+      title: "用自己的桩替换对方浮桩",
+      description: "对方浮桩可以被替换，但替换后必须立刻与已有己方桩相邻并形成墙。已经参与墙的锚桩不能替换。",
+      instruction: "选择黑色浮桩，用白桩替换它并与左侧白桩形成墙。",
+      target: { row: 5, col: 5 },
+      initialState: replacementLessonState(),
+      showDistances: false,
+    },
+    {
       label: "最短路径长度",
-      title: "比较四个出口的最少步数",
-      description: "上、右、下、左四个数字包含最后越界的一步。无法到达时显示 ∞，这里只显示长度，不显示具体路线。",
-      instruction: "补上球上方的墙，观察上边距离从 1 变为 2。",
+      title: "比较四个相邻位置的逃生长度",
+      description: "数字显示球向上、右、下、左移动一步后，所在位置的最短逃生路径长度；最后越界的一步计入长度。若墙挡住该方向，则显示 ∞。",
+      instruction: "补上球上方的墙，观察上方相邻位置从 0 变为 ∞。",
       target: { row: 0, col: 6 },
       initialState: distanceLessonState(),
       showDistances: true,

@@ -50,6 +50,7 @@ export function RulesDialog({ open, onClose }: RulesDialogProps) {
         <section>
           <h3>球的移动</h3>
           <p>每次落桩后计算全部最短逃生路线。如果这些路线的第一步全部相同，球向该方向移动一格，否则不移动。</p>
+          <p>等价地说：四个可达相邻位置中，只有一个位置的逃生长度最短时，球才会向它移动。</p>
           <p>每回合最多移动一格，越过边界的一步计入路径长度。</p>
         </section>
         <section>
@@ -58,8 +59,9 @@ export function RulesDialog({ open, onClose }: RulesDialogProps) {
           <p>轮到一方时没有任何合法落子或替换位置，游戏和棋。</p>
         </section>
         <section>
-          <h3>难度</h3>
-          <p>简单模式显示落子前后四个方向的最短逃生长度。困难模式不显示这些数字。</p>
+          <h3>辅助信息</h3>
+          <p>简单模式在球的上、右、下、左四个相邻位置显示落子前后的最短逃生路径长度；被墙挡住、无法一步到达的方向显示 ∞，一步即可越界的方向显示 0。</p>
+          <p>若落子后球会移动，还会显示虚线箭头与下一步落点。所有提示都不参与胜负判定。</p>
         </section>
       </div>
       <button className="primary-button dialog-confirm" type="button" onClick={onClose}>

@@ -3,6 +3,7 @@ import * as Phaser from "phaser";
 import {
   getLegalMove,
   previewMove,
+  type Cell,
   type DirectionalDistances,
   type GameState,
   type Move,
@@ -13,11 +14,12 @@ import {
   EscapeBoardScene,
   type BoardSceneView,
 } from "../game/rendering/EscapeBoardScene";
-import { BoardEdgeDistances } from "./BoardEdgeDistances";
+import { BoardNeighborDistances } from "./BoardNeighborDistances";
 
 export interface BoardDistanceHints {
   current: DirectionalDistances;
   after: DirectionalDistances | null;
+  origin?: Cell;
 }
 
 export type BoardInputSource = "pointer" | "keyboard";
@@ -196,6 +198,9 @@ export function BoardCanvas({
       tabIndex={interactive ? 0 : -1}
       data-goal-player={goalPlayer}
       data-turn={state.turn}
+      data-board-size={state.size}
+      data-ball-row={state.ball.row}
+      data-ball-col={state.ball.col}
       data-ball-move-preview={
         showBallMovePreview ? movePreview?.ballWillMove ?? undefined : undefined
       }
@@ -209,7 +214,9 @@ export function BoardCanvas({
     >
       <div ref={hostRef} className="board-canvas" />
       {distanceHints && (
-        <BoardEdgeDistances
+        <BoardNeighborDistances
+          ball={distanceHints.origin ?? state.ball}
+          boardSize={state.size}
           current={distanceHints.current}
           after={distanceHints.after}
           highlightShortest={highlightShortestDistances}

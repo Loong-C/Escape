@@ -4,8 +4,8 @@ import type { AiDifficulty, SearchResult } from "../ai";
 import {
   applyMove,
   createGame,
-  getDirectionalExitDistances,
   getLegalMove,
+  getNeighborEscapeDistances,
   previewMove,
   type Direction,
   type GameState,
@@ -141,7 +141,7 @@ export function MatchScreen({
     setFocusedMove(null);
   }, [state.moveNumber]);
 
-  const currentDistances = getDirectionalExitDistances(state);
+  const currentDistances = getNeighborEscapeDistances(state);
   const movePreview = focusedMove ? previewMove(state, focusedMove) : null;
   const distanceHints =
     difficulty === "easy"

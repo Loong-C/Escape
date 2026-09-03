@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import type { AiDifficulty } from "../ai";
-import { getDirectionalExitDistances, previewMove, type Move, type MovePreview } from "../game";
+import { getNeighborEscapeDistances, previewMove, type Move, type MovePreview } from "../game";
 import {
   TUTORIAL_LABELS,
   completeTutorialMove,
   createTutorialLessons,
+  type TutorialLesson,
 } from "../tutorial/lessons";
 import { LazyBoardCanvas } from "./LazyBoardCanvas";
 
@@ -13,14 +14,15 @@ interface TutorialScreenProps {
   onStartMatch: (difficulty: AiDifficulty) => void;
 }
 
-const SUCCESS_MESSAGES = [
-  "这枚桩尚未连接墙，所以它是浮桩。",
-  "墙已经形成，两枚白桩现在都是锚桩。",
-  "墙挡住了直接向上的出口，上边距离从 1 变为 2；两个同长首步并存，所以球没有移动。",
-  "新墙让上边距离变长，右侧成为唯一的最短首步，球按规则只移动了一格。",
-  "球从右边界离开。左右边界属于白方，所以这一局由白方获胜。",
-  "四面墙已经封闭。落下最后一枚桩的白方立即获胜。",
-] as const;
+const SUCCESS_MESSAGES: Record<TutorialLesson["label"], string> = {
+  放置桩: "这枚桩尚未连接墙，所以它是浮桩。",
+  形成墙: "墙已经形成，两枚白桩现在都是锚桩。",
+  替换浮桩: "黑色浮桩已被白桩替换，并与左侧白桩形成了墙。",
+  最短路径长度: "新墙挡住了向上的一步，上方相邻位置显示为 ∞，下方从 2 变为 3；左右两侧同为最小值 1，所以球没有移动。",
+  推动球: "新墙让上方显示为 ∞，右侧成为唯一的最小值，球按规则只移动了一格。",
+  边界胜负: "球从右边界离开。左右边界属于白方，所以这一局由白方获胜。",
+  封闭胜负: "四面墙已经封闭。落下最后一枚桩的白方立即获胜。",
+};
 
 export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
   const lessons = useMemo(createTutorialLessons, []);
@@ -57,10 +59,9 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
   }
 
   const boardFocus = lesson.showDistances ? lesson.target : focusedMove;
-  const tutorialDistances =
-    completed && completionPreview
-      ? completionPreview.afterPlacement
-      : getDirectionalExitDistances(state);
+  const tutorialPreview = completed
+    ? completionPreview
+    : previewMove(state, lesson.target);
 
   return (
     <main id="main-content" className="game-layout tutorial-layout" tabIndex={-1}>
@@ -73,13 +74,14 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
           distanceHints={
             lesson.showDistances
               ? {
-                  current: tutorialDistances,
-                  after: null,
+                  current: tutorialPreview?.before ?? getNeighborEscapeDistances(state),
+                  after: tutorialPreview?.afterPlacement ?? null,
+                  origin: lesson.initialState.ball,
                 }
               : null
           }
           highlightShortestDistances={lesson.showDistances}
-          showBallMovePreview={lessonIndex === 3 && !completed}
+          showBallMovePreview={lesson.label === "推动球" && !completed}
           interactive={!completed}
           canSelect={(move) =>
             !completed && move.row === lesson.target.row && move.col === lesson.target.col
@@ -100,7 +102,7 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
           <p className="tutorial-instruction">{lesson.instruction}</p>
         </div>
 
-        {lessonIndex === 1 && (
+        {(lesson.label === "形成墙" || lesson.label === "替换浮桩") && (
           <div className="post-legend" aria-label="桩的状态图例">
             <span><i className="post-symbol post-symbol--float" />浮桩</span>
             <span><i className="post-symbol post-symbol--anchor" />锚桩</span>
@@ -108,7 +110,7 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
         )}
 
         <div className="tutorial-feedback" aria-live="polite">
-          {completed ? SUCCESS_MESSAGES[lessonIndex] : "完成棋盘上的蓝色目标后继续。"}
+          {completed ? SUCCESS_MESSAGES[lesson.label] : "完成棋盘上的蓝色目标后继续。"}
         </div>
 
         <div className="tutorial-actions">

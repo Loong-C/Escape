@@ -29,6 +29,10 @@ const movementPreviewScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-movement-preview.png",
 );
+const replacementTutorialScreenshotPath = screenshotPath.replace(
+  /\.png$/i,
+  "-tutorial-replacement.png",
+);
 const trappedTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-trapped.png",
@@ -202,25 +206,25 @@ for (let attempt = 0; attempt < 40; attempt += 1) {
 if (!tutorialBoardReady) {
   throw new Error("Tutorial board did not finish loading.");
 }
-for (let lesson = 0; lesson < 6; lesson += 1) {
+for (let lesson = 0; lesson < 7; lesson += 1) {
   const stepVisible = await evaluate(
-    `document.body.innerText.includes("${lesson + 1} / 6")`,
+    `document.body.innerText.includes("${lesson + 1} / 7")`,
   );
   if (!stepVisible) throw new Error(`Tutorial lesson ${lesson + 1} did not render.`);
 
-  if (lesson === 2) {
+  if (lesson === 3) {
     const beforePlacement = await evaluate(`(() => {
-      const edges = [...document.querySelectorAll('.edge-distance')];
+      const neighbors = [...document.querySelectorAll('.neighbor-distance')];
       return {
-        up: edges.find((element) => element.dataset.direction === 'up')?.textContent.trim(),
-        changed: edges.filter((element) => element.dataset.changed === 'true').length,
+        up: neighbors.find((element) => element.dataset.direction === 'up')?.textContent.trim(),
+        changed: neighbors.filter((element) => element.dataset.changed === 'true').length,
       };
     })()`);
-    if (beforePlacement.up !== "1" || beforePlacement.changed !== 0) {
-      throw new Error(`Tutorial distances changed before placement: ${JSON.stringify(beforePlacement)}`);
+    if (beforePlacement.up !== "0∞" || beforePlacement.changed !== 2) {
+      throw new Error(`Tutorial neighbor preview is incorrect: ${JSON.stringify(beforePlacement)}`);
     }
   }
-  if (lesson === 3) {
+  if (lesson === 4) {
     const previewDirection = await evaluate(
       `document.querySelector('[role="application"]').dataset.ballMovePreview ?? null`,
     );
@@ -240,30 +244,39 @@ for (let lesson = 0; lesson < 6; lesson += 1) {
   await delay(250);
 
   if (lesson === 2) {
+    const replacementRuleVisible = await evaluate(
+      `document.body.innerText.includes("黑色浮桩已被白桩替换")`,
+    );
+    if (!replacementRuleVisible) {
+      throw new Error("Floating-post replacement tutorial feedback is missing.");
+    }
+    await captureScreenshot(replacementTutorialScreenshotPath);
+  }
+  if (lesson === 3) {
     const displayedUpDistance = await evaluate(
-      `[...document.querySelectorAll('.edge-distance')]
+      `[...document.querySelectorAll('.neighbor-distance')]
         .find((element) => element.dataset.direction === 'up')?.textContent.trim()`,
     );
     const changedEdgeCount = await evaluate(
-      `document.querySelectorAll('.edge-distance[data-changed="true"]').length`,
+      `document.querySelectorAll('.neighbor-distance[data-changed="true"]').length`,
     );
     const shortestEdges = await evaluate(
-      `[...document.querySelectorAll('.edge-distance.is-shortest')]
+      `[...document.querySelectorAll('.neighbor-distance.is-shortest')]
         .map((element) => element.dataset.direction)`,
     );
-    if (displayedUpDistance !== "2" || changedEdgeCount !== 0) {
+    if (displayedUpDistance !== "0∞" || changedEdgeCount !== 2) {
       throw new Error(
         `Distance tutorial did not update on placement: ${JSON.stringify({ displayedUpDistance, changedEdgeCount })}`,
       );
     }
-    if (JSON.stringify(shortestEdges) !== JSON.stringify(["up"])) {
-      throw new Error(`Distance tutorial highlighted the wrong shortest edge: ${JSON.stringify(shortestEdges)}`);
+    if (JSON.stringify(shortestEdges) !== JSON.stringify(["right", "left"])) {
+      throw new Error(`Distance tutorial highlighted the wrong neighboring cells: ${JSON.stringify(shortestEdges)}`);
     }
     await captureScreenshot(distanceTutorialScreenshotPath);
   }
-  if (lesson === 3) {
+  if (lesson === 4) {
     const shortestEdges = await evaluate(
-      `[...document.querySelectorAll('.edge-distance.is-shortest')]
+      `[...document.querySelectorAll('.neighbor-distance.is-shortest')]
         .map((element) => element.dataset.direction)`,
     );
     if (JSON.stringify(shortestEdges) !== JSON.stringify(["right"])) {
@@ -271,14 +284,14 @@ for (let lesson = 0; lesson < 6; lesson += 1) {
     }
     await captureScreenshot(movementTutorialScreenshotPath);
   }
-  if (lesson === 4) {
+  if (lesson === 5) {
     const boundaryRuleVisible = await evaluate(
       `document.body.innerText.includes("左右边界属于白方")`,
     );
     if (!boundaryRuleVisible) throw new Error("Boundary victory tutorial feedback is missing.");
     await captureScreenshot(boundaryTutorialScreenshotPath);
   }
-  if (lesson === 5) {
+  if (lesson === 6) {
     const trappedRuleVisible = await evaluate(
       `document.body.innerText.includes("四面墙已经封闭")`,
     );
@@ -418,38 +431,46 @@ if (modelStatus !== 200) {
 }
 
 const easyDistanceDirections = await evaluate(
-  `[...document.querySelectorAll('.edge-distance')]
+  `[...document.querySelectorAll('.neighbor-distance')]
     .map((element) => element.dataset.direction)
     .sort()`,
 );
 if (JSON.stringify(easyDistanceDirections) !== JSON.stringify(["down", "left", "right", "up"])) {
-  throw new Error(`Easy mode edge hints are incomplete: ${JSON.stringify(easyDistanceDirections)}`);
+  throw new Error(`Easy mode neighbor hints are incomplete: ${JSON.stringify(easyDistanceDirections)}`);
 }
-const edgeHintLayout = await evaluate(`(() => {
+const neighborHintLayout = await evaluate(`(() => {
   const shell = document.querySelector('.board-shell').getBoundingClientRect();
-  const boundaryInset = shell.width * 0.104;
-  const boundary = {
-    top: shell.top + boundaryInset,
-    right: shell.right - boundaryInset,
-    bottom: shell.bottom - boundaryInset,
-    left: shell.left + boundaryInset,
+  const board = document.querySelector('[role="application"]');
+  const size = Number(board.dataset.boardSize);
+  const ball = {
+    row: Number(board.dataset.ballRow),
+    col: Number(board.dataset.ballCol),
   };
-  const hints = [...document.querySelectorAll('.edge-distance')];
-  const outside = hints.every((element) => {
+  const step = shell.width * 0.792 / size;
+  const center = {
+    x: shell.left + shell.width * 0.104 + (ball.col + 0.5) * step,
+    y: shell.top + shell.width * 0.104 + (ball.row + 0.5) * step,
+  };
+  const deltas = {
+    up: { x: 0, y: -step },
+    right: { x: step, y: 0 },
+    down: { x: 0, y: step },
+    left: { x: -step, y: 0 },
+  };
+  const hints = [...document.querySelectorAll('.neighbor-distance')];
+  const aligned = hints.every((element) => {
     const rect = element.getBoundingClientRect();
-    const direction = element.dataset.direction;
-    if (direction === 'up') return rect.bottom < boundary.top;
-    if (direction === 'right') return rect.left > boundary.right;
-    if (direction === 'down') return rect.top > boundary.bottom;
-    return rect.right < boundary.left;
+    const delta = deltas[element.dataset.direction];
+    return Math.abs(rect.left + rect.width / 2 - (center.x + delta.x)) < 2
+      && Math.abs(rect.top + rect.height / 2 - (center.y + delta.y)) < 2;
   });
   return {
-    outside,
+    aligned,
     hasArrow: hints.some((element) => /[↑→↓←›>]/.test(element.textContent)),
   };
 })()`);
-if (!edgeHintLayout.outside || edgeHintLayout.hasArrow) {
-  throw new Error(`Edge hint layout is invalid: ${JSON.stringify(edgeHintLayout)}`);
+if (!neighborHintLayout.aligned || neighborHintLayout.hasArrow) {
+  throw new Error(`Neighbor hint layout is invalid: ${JSON.stringify(neighborHintLayout)}`);
 }
 await evaluate(`(() => {
   const board = document.querySelector('[role="application"]');
@@ -467,7 +488,7 @@ await evaluate(
 );
 await delay(250);
 const distanceHintCount = await evaluate(
-  `document.querySelectorAll('.edge-distance').length`,
+  `document.querySelectorAll('.neighbor-distance').length`,
 );
 if (distanceHintCount !== 0) {
   throw new Error("Hard mode still exposes edge distance hints.");
@@ -496,14 +517,15 @@ console.log(
       aiModelStatus: modelStatus,
       blockedCloudflareBeacons: consoleErrors.length - unexpectedConsoleErrors.length,
       consoleErrors: unexpectedConsoleErrors.length,
-      easyModeEdgeDirections: easyDistanceDirections,
-      edgeHintsOutsideBoard: edgeHintLayout.outside,
-      edgeHintsContainArrows: edgeHintLayout.hasArrow,
+      easyModeNeighborDirections: easyDistanceDirections,
+      neighborHintsAligned: neighborHintLayout.aligned,
+      neighborHintsContainArrows: neighborHintLayout.hasArrow,
       hardModeDistanceHints: distanceHintCount,
       startScreenshotPath,
       distanceTutorialScreenshotPath,
       movementTutorialScreenshotPath,
       movementPreviewScreenshotPath,
+      replacementTutorialScreenshotPath,
       boundaryTutorialScreenshotPath,
       trappedTutorialScreenshotPath,
       easyScreenshotPath,

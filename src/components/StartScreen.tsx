@@ -45,7 +45,7 @@ export function StartScreen({
           />
           <p className="option-note">
             {difficulty === "easy"
-              ? "显示棋盘外的四边距离与球的下一步预览。"
+              ? "显示球四个相邻位置的逃生长度与下一步预览。"
               : "不显示距离与移动预览；人机模式的 AI 强度与简易模式相同。"}
           </p>
         </section>
