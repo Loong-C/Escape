@@ -19,6 +19,8 @@ const PLAYING_OUTCOME = {
   reason: null,
 } as const;
 
+export const STANDARD_BOARD_SIZE = 17;
+
 const DIRECTION_DELTAS: Record<Direction, Cell> = {
   up: { row: -1, col: 0 },
   right: { row: 0, col: 1 },
@@ -32,7 +34,7 @@ function assertBoardSize(size: number): void {
   }
 }
 
-export function createGame(size = 11): GameState {
+export function createGame(size = STANDARD_BOARD_SIZE): GameState {
   assertBoardSize(size);
   const center = Math.floor(size / 2);
 

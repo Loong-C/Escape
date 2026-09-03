@@ -60,8 +60,8 @@ export function RulesDialog({ open, onClose }: RulesDialogProps) {
         </section>
         <section>
           <h3>辅助信息</h3>
-          <p>简单模式在球的上、右、下、左四个相邻位置显示落子前后的最短逃生路径长度；被墙挡住、无法一步到达的方向显示 ∞，一步即可越界的方向显示 0。</p>
-          <p>若落子后球会移动，还会显示虚线箭头与下一步落点。所有提示都不参与胜负判定。</p>
+          <p>简单模式在球的上、右、下、左四个相邻位置直接显示最短逃生路径长度；预览尚未确认的落子时，数字会直接切换为落子后的值。</p>
+          <p>被墙挡住、无法一步到达的方向显示 ∞，一步即可越界的方向显示 0；若最小值唯一，该数字会以强调色标出。所有提示都不参与胜负判定。</p>
         </section>
       </div>
       <button className="primary-button dialog-confirm" type="button" onClick={onClose}>

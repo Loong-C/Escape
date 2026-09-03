@@ -25,10 +25,6 @@ const movementTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-movement.png",
 );
-const movementPreviewScreenshotPath = screenshotPath.replace(
-  /\.png$/i,
-  "-tutorial-movement-preview.png",
-);
 const replacementTutorialScreenshotPath = screenshotPath.replace(
   /\.png$/i,
   "-tutorial-replacement.png",
@@ -206,6 +202,12 @@ for (let attempt = 0; attempt < 40; attempt += 1) {
 if (!tutorialBoardReady) {
   throw new Error("Tutorial board did not finish loading.");
 }
+const tutorialBoardSize = await evaluate(
+  `Number(document.querySelector('[role="application"]').dataset.boardSize)`,
+);
+if (tutorialBoardSize !== 17) {
+  throw new Error(`Tutorial board size is ${tutorialBoardSize}, expected 17.`);
+}
 for (let lesson = 0; lesson < 7; lesson += 1) {
   const stepVisible = await evaluate(
     `document.body.innerText.includes("${lesson + 1} / 7")`,
@@ -217,21 +219,34 @@ for (let lesson = 0; lesson < 7; lesson += 1) {
       const neighbors = [...document.querySelectorAll('.neighbor-distance')];
       return {
         up: neighbors.find((element) => element.dataset.direction === 'up')?.textContent.trim(),
-        changed: neighbors.filter((element) => element.dataset.changed === 'true').length,
+        down: neighbors.find((element) => element.dataset.direction === 'down')?.textContent.trim(),
+        shortest: neighbors.filter((element) => element.classList.contains('is-shortest'))
+          .map((element) => element.dataset.direction),
+        struck: neighbors.some((element) => getComputedStyle(element).textDecorationLine.includes('line-through')),
       };
     })()`);
-    if (beforePlacement.up !== "0∞" || beforePlacement.changed !== 2) {
+    if (
+      beforePlacement.up !== "∞" ||
+      beforePlacement.down !== "3" ||
+      beforePlacement.shortest.length !== 0 ||
+      beforePlacement.struck
+    ) {
       throw new Error(`Tutorial neighbor preview is incorrect: ${JSON.stringify(beforePlacement)}`);
     }
   }
   if (lesson === 4) {
-    const previewDirection = await evaluate(
-      `document.querySelector('[role="application"]').dataset.ballMovePreview ?? null`,
-    );
-    if (previewDirection !== "right") {
-      throw new Error(`Movement preview points in the wrong direction: ${previewDirection}`);
+    const movementPreview = await evaluate(`(() => ({
+      hasBallPreviewAttribute: document.querySelector('[role="application"]')
+        .hasAttribute('data-ball-move-preview'),
+      shortest: [...document.querySelectorAll('.neighbor-distance.is-shortest')]
+        .map((element) => element.dataset.direction),
+    }))()`);
+    if (
+      movementPreview.hasBallPreviewAttribute ||
+      JSON.stringify(movementPreview.shortest) !== JSON.stringify(["right"])
+    ) {
+      throw new Error(`Movement hint preview is incorrect: ${JSON.stringify(movementPreview)}`);
     }
-    await captureScreenshot(movementPreviewScreenshotPath);
   }
 
   await evaluate(`(() => {
@@ -257,20 +272,15 @@ for (let lesson = 0; lesson < 7; lesson += 1) {
       `[...document.querySelectorAll('.neighbor-distance')]
         .find((element) => element.dataset.direction === 'up')?.textContent.trim()`,
     );
-    const changedEdgeCount = await evaluate(
-      `document.querySelectorAll('.neighbor-distance[data-changed="true"]').length`,
-    );
     const shortestEdges = await evaluate(
       `[...document.querySelectorAll('.neighbor-distance.is-shortest')]
         .map((element) => element.dataset.direction)`,
     );
-    if (displayedUpDistance !== "0∞" || changedEdgeCount !== 2) {
-      throw new Error(
-        `Distance tutorial did not update on placement: ${JSON.stringify({ displayedUpDistance, changedEdgeCount })}`,
-      );
+    if (displayedUpDistance !== "∞") {
+      throw new Error(`Distance tutorial did not update on placement: ${displayedUpDistance}`);
     }
-    if (JSON.stringify(shortestEdges) !== JSON.stringify(["right", "left"])) {
-      throw new Error(`Distance tutorial highlighted the wrong neighboring cells: ${JSON.stringify(shortestEdges)}`);
+    if (shortestEdges.length !== 0) {
+      throw new Error(`Distance tutorial highlighted a tied minimum: ${JSON.stringify(shortestEdges)}`);
     }
     await captureScreenshot(distanceTutorialScreenshotPath);
   }
@@ -321,12 +331,14 @@ await delay(400);
 const localInitialState = await evaluate(`(() => {
   const board = document.querySelector('[role="application"]');
   return {
+    size: Number(board?.dataset.boardSize),
     goalPlayer: board?.dataset.goalPlayer,
     turn: board?.dataset.turn,
     hasPlayerOneTurn: document.body.innerText.includes("玩家 1 的回合"),
   };
 })()`);
 if (
+  localInitialState.size !== 17 ||
   localInitialState.goalPlayer !== "white" ||
   localInitialState.turn !== "white" ||
   !localInitialState.hasPlayerOneTurn
@@ -466,10 +478,20 @@ const neighborHintLayout = await evaluate(`(() => {
   });
   return {
     aligned,
-    hasArrow: hints.some((element) => /[↑→↓←›>]/.test(element.textContent)),
+    unframed: hints.every((element) => {
+      const style = getComputedStyle(element);
+      return style.borderTopWidth === '0px'
+        && style.backgroundColor === 'rgba(0, 0, 0, 0)'
+        && style.boxShadow === 'none';
+    }),
+    valuesAreDirect: hints.every((element) => element.children.length === 0),
   };
 })()`);
-if (!neighborHintLayout.aligned || neighborHintLayout.hasArrow) {
+if (
+  !neighborHintLayout.aligned ||
+  !neighborHintLayout.unframed ||
+  !neighborHintLayout.valuesAreDirect
+) {
   throw new Error(`Neighbor hint layout is invalid: ${JSON.stringify(neighborHintLayout)}`);
 }
 await evaluate(`(() => {
@@ -519,12 +541,12 @@ console.log(
       consoleErrors: unexpectedConsoleErrors.length,
       easyModeNeighborDirections: easyDistanceDirections,
       neighborHintsAligned: neighborHintLayout.aligned,
-      neighborHintsContainArrows: neighborHintLayout.hasArrow,
+      neighborHintsUnframed: neighborHintLayout.unframed,
+      neighborValuesAreDirect: neighborHintLayout.valuesAreDirect,
       hardModeDistanceHints: distanceHintCount,
       startScreenshotPath,
       distanceTutorialScreenshotPath,
       movementTutorialScreenshotPath,
-      movementPreviewScreenshotPath,
       replacementTutorialScreenshotPath,
       boundaryTutorialScreenshotPath,
       trappedTutorialScreenshotPath,

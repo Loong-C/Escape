@@ -79,24 +79,24 @@ describe("AI foundation", () => {
 
   it.each([
     {
-      missing: [6, 6],
-      support: [6, 7],
-      opponentPosts: [[5, 5], [5, 6], [6, 5]],
+      missing: [9, 9],
+      support: [9, 10],
+      opponentPosts: [[8, 8], [8, 9], [9, 8]],
     },
     {
-      missing: [6, 5],
-      support: [6, 4],
-      opponentPosts: [[5, 5], [5, 6], [6, 6]],
+      missing: [9, 8],
+      support: [9, 7],
+      opponentPosts: [[8, 8], [8, 9], [9, 9]],
     },
     {
-      missing: [5, 6],
-      support: [5, 7],
-      opponentPosts: [[5, 5], [6, 5], [6, 6]],
+      missing: [8, 9],
+      support: [8, 10],
+      opponentPosts: [[8, 8], [9, 8], [9, 9]],
     },
     {
-      missing: [5, 5],
-      support: [5, 4],
-      opponentPosts: [[5, 6], [6, 5], [6, 6]],
+      missing: [8, 8],
+      support: [8, 7],
+      opponentPosts: [[8, 9], [9, 8], [9, 9]],
     },
   ])("finds an exact response to the enclosure threat at $missing", (scenario) => {
     const entries: Array<[number, number, Player]> = [
@@ -125,10 +125,10 @@ describe("AI foundation", () => {
 
   it("keeps the exact enclosure defense in easy mode", () => {
     const state = placeMany(createGame(), [
-      [5, 5, "black"],
-      [5, 6, "black"],
-      [6, 5, "black"],
-      [6, 7, "white"],
+      [8, 8, "black"],
+      [8, 9, "black"],
+      [9, 8, "black"],
+      [9, 10, "white"],
     ]);
     const model = new ValueNetwork(12, new SeededRandom(19));
     const result = chooseMoveWithSearch(state, model, {

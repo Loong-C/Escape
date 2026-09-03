@@ -2,7 +2,6 @@ import * as Phaser from "phaser";
 import {
   getPost,
   getWallSegments,
-  type Direction,
   type GameState,
   type Move,
   type MovePreview,
@@ -15,7 +14,6 @@ export interface BoardSceneView {
   focusedMove: Move | null;
   tutorialTarget: Move | null;
   goalPlayer: Player;
-  showBallMovePreview: boolean;
   interactive: boolean;
   dark: boolean;
   canSelect: (move: Move) => boolean;
@@ -29,13 +27,6 @@ interface BoardSceneCallbacks {
 const CANVAS_SIZE = 1_000;
 const BOARD_MARGIN = 104;
 const BOARD_LENGTH = CANVAS_SIZE - BOARD_MARGIN * 2;
-
-const DIRECTION_DELTAS: Record<Direction, { row: number; col: number }> = {
-  up: { row: -1, col: 0 },
-  right: { row: 0, col: 1 },
-  down: { row: 1, col: 0 },
-  left: { row: 0, col: -1 },
-};
 
 const LIGHT_COLORS = {
   background: 0xf4f5f6,
@@ -154,7 +145,6 @@ export class EscapeBoardScene extends Phaser.Scene {
     }
 
     this.drawPreviewWalls(graphics, colors.accent);
-    this.drawBallMovePreview(graphics, colors.accent);
 
     for (let row = 0; row <= state.size; row += 1) {
       for (let col = 0; col <= state.size; col += 1) {
@@ -286,70 +276,6 @@ export class EscapeBoardScene extends Phaser.Scene {
         graphics.lineBetween(start.x, start.y, end.x, end.y);
       }
     }
-  }
-
-  private drawBallMovePreview(
-    graphics: Phaser.GameObjects.Graphics,
-    accent: number,
-  ): void {
-    if (
-      !this.view?.interactive ||
-      !this.view.showBallMovePreview ||
-      !this.view.preview?.ballWillMove
-    ) {
-      return;
-    }
-
-    const { state } = this.view;
-    const delta = DIRECTION_DELTAS[this.view.preview.ballWillMove];
-    const step = BOARD_LENGTH / state.size;
-    const start = new Phaser.Math.Vector2(
-      BOARD_MARGIN + (state.ball.col + 0.5) * step,
-      BOARD_MARGIN + (state.ball.row + 0.5) * step,
-    );
-    const destination = new Phaser.Math.Vector2(
-      start.x + delta.col * step,
-      start.y + delta.row * step,
-    );
-    const direction = destination.clone().subtract(start).normalize();
-    const normal = new Phaser.Math.Vector2(-direction.y, direction.x);
-    const lineStart = start.clone().add(direction.clone().scale(24));
-    const arrowTip = destination.clone().subtract(direction.clone().scale(23));
-    const lineLength = Phaser.Math.Distance.Between(
-      lineStart.x,
-      lineStart.y,
-      arrowTip.x,
-      arrowTip.y,
-    );
-
-    graphics.lineStyle(4, accent, 0.72);
-    for (let offset = 0; offset < lineLength; offset += 18) {
-      const dashEnd = Math.min(offset + 10, lineLength);
-      graphics.lineBetween(
-        lineStart.x + direction.x * offset,
-        lineStart.y + direction.y * offset,
-        lineStart.x + direction.x * dashEnd,
-        lineStart.y + direction.y * dashEnd,
-      );
-    }
-
-    const arrowBase = arrowTip.clone().subtract(direction.clone().scale(13));
-    const arrowLeft = arrowBase.clone().add(normal.clone().scale(8));
-    const arrowRight = arrowBase.clone().subtract(normal.clone().scale(8));
-    graphics.fillStyle(accent, 0.82);
-    graphics.fillTriangle(
-      arrowTip.x,
-      arrowTip.y,
-      arrowLeft.x,
-      arrowLeft.y,
-      arrowRight.x,
-      arrowRight.y,
-    );
-
-    graphics.fillStyle(accent, 0.1);
-    graphics.fillCircle(destination.x, destination.y, 17);
-    graphics.lineStyle(3, accent, 0.6);
-    graphics.strokeCircle(destination.x, destination.y, 17);
   }
 
   private addInteractionZones(): void {

@@ -1,4 +1,12 @@
-import { createGame, setPost, type GameState, type Player } from ".";
+import {
+  STANDARD_BOARD_SIZE,
+  createGame,
+  setPost,
+  type GameState,
+  type Player,
+} from ".";
+
+const CENTER = Math.floor(STANDARD_BOARD_SIZE / 2);
 
 function placeMany(
   state: GameState,
@@ -12,17 +20,17 @@ function placeMany(
 
 export function createHomeBoard(): GameState {
   return placeMany(createGame(), [
-    [2, 2, "black"],
-    [2, 3, "black"],
-    [2, 4, "black"],
-    [4, 6, "white"],
-    [4, 7, "white"],
-    [4, 8, "white"],
-    [6, 9, "black"],
-    [7, 9, "black"],
-    [8, 9, "black"],
-    [8, 4, "white"],
-    [8, 5, "white"],
-    [9, 5, "white"],
+    [CENTER - 4, CENTER - 4, "black"],
+    [CENTER - 4, CENTER - 3, "black"],
+    [CENTER - 4, CENTER - 2, "black"],
+    [CENTER - 2, CENTER + 2, "white"],
+    [CENTER - 2, CENTER + 3, "white"],
+    [CENTER - 2, CENTER + 4, "white"],
+    [CENTER + 2, CENTER + 5, "black"],
+    [CENTER + 3, CENTER + 5, "black"],
+    [CENTER + 4, CENTER + 5, "black"],
+    [CENTER + 4, CENTER - 2, "white"],
+    [CENTER + 4, CENTER - 1, "white"],
+    [CENTER + 5, CENTER - 1, "white"],
   ]);
 }

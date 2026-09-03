@@ -14,13 +14,13 @@ describe("Escape tutorial outcomes", () => {
     );
 
     expect(lesson.label).toBe("替换浮桩");
-    expect(getPost(lesson.initialState, 5, 5)).toBe("black");
+    expect(getPost(lesson.initialState, 8, 8)).toBe("black");
     expect(preview?.move.kind).toBe("replace");
-    expect(getPost(result!.state, 5, 5)).toBe("white");
+    expect(getPost(result!.state, 8, 8)).toBe("white");
     expect(getWallSegments(result!.state)).toContainEqual({
       orientation: "horizontal",
-      row: 5,
-      col: 4,
+      row: 8,
+      col: 7,
       color: "white",
     });
   });
@@ -29,7 +29,7 @@ describe("Escape tutorial outcomes", () => {
     const lesson = createTutorialLessons()[3];
     const preview = previewMove(lesson.initialState, lesson.target);
 
-    expect(lesson.initialState.size).toBe(11);
+    expect(lesson.initialState.size).toBe(17);
     expect(preview?.before.up).toBe(0);
     expect(preview?.afterPlacement.up).toBe(Number.POSITIVE_INFINITY);
     expect(preview?.ballWillMove).toBeNull();
@@ -54,17 +54,17 @@ describe("Escape tutorial outcomes", () => {
       preview,
     );
 
-    expect(lesson.initialState.size).toBe(11);
+    expect(lesson.initialState.size).toBe(17);
     expect(preview?.before.up).toBe(preview?.before.right);
     expect(preview?.afterPlacement.up).toBeGreaterThan(
       preview?.afterPlacement.right ?? Number.POSITIVE_INFINITY,
     );
     expect(preview?.shortestAfterPlacement.firstSteps).toEqual(["right"]);
-    expect(result?.state.ball).toEqual({ row: 5, col: 6 });
+    expect(result?.state.ball).toEqual({ row: 8, col: 9 });
     expect(getWallSegments(result!.state)).toContainEqual({
       orientation: "horizontal",
-      row: 5,
-      col: 5,
+      row: 8,
+      col: 8,
       color: "white",
     });
   });
@@ -79,7 +79,7 @@ describe("Escape tutorial outcomes", () => {
       preview,
     );
 
-    expect(lesson.initialState.size).toBe(11);
+    expect(lesson.initialState.size).toBe(17);
     expect(result?.state.outcome).toEqual({
       status: "won",
       winner: "white",
@@ -98,7 +98,7 @@ describe("Escape tutorial outcomes", () => {
       preview,
     );
 
-    expect(lesson.initialState.size).toBe(11);
+    expect(lesson.initialState.size).toBe(17);
     expect(preview?.wouldTrap).toBe(true);
     expect(result?.state.outcome).toEqual({
       status: "won",

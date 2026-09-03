@@ -17,8 +17,7 @@ import {
 import { BoardNeighborDistances } from "./BoardNeighborDistances";
 
 export interface BoardDistanceHints {
-  current: DirectionalDistances;
-  after: DirectionalDistances | null;
+  distances: DirectionalDistances;
   origin?: Cell;
 }
 
@@ -31,7 +30,6 @@ export interface BoardCanvasProps {
   goalPlayer?: Player;
   distanceHints?: BoardDistanceHints | null;
   highlightShortestDistances?: boolean;
-  showBallMovePreview?: boolean;
   interactive: boolean;
   canSelect?: (move: Move) => boolean;
   onHover: (move: Move | null) => void;
@@ -60,7 +58,6 @@ export function BoardCanvas({
   goalPlayer = state.turn,
   distanceHints = null,
   highlightShortestDistances = false,
-  showBallMovePreview = false,
   interactive,
   canSelect,
   onHover,
@@ -128,7 +125,6 @@ export function BoardCanvas({
       focusedMove: activeFocus,
       tutorialTarget,
       goalPlayer,
-      showBallMovePreview,
       interactive,
       dark,
       canSelect: selectable,
@@ -141,7 +137,6 @@ export function BoardCanvas({
     interactive,
     movePreview,
     selectable,
-    showBallMovePreview,
     state,
     tutorialTarget,
   ]);
@@ -150,19 +145,6 @@ export function BoardCanvas({
     goalPlayer === "white"
       ? "当前行动方的目标边界为左右两侧"
       : "当前行动方的目标边界为上下两侧";
-  const movementDescription =
-    showBallMovePreview && movePreview?.ballWillMove
-      ? `。确认后球将向${
-          movePreview.ballWillMove === "up"
-            ? "上"
-            : movePreview.ballWillMove === "right"
-              ? "右"
-              : movePreview.ballWillMove === "down"
-                ? "下"
-                : "左"
-        }移动一格`
-      : "";
-
   function handleKeyboard(event: KeyboardEvent<HTMLDivElement>): void {
     if (!interactive) {
       return;
@@ -201,12 +183,9 @@ export function BoardCanvas({
       data-board-size={state.size}
       data-ball-row={state.ball.row}
       data-ball-col={state.ball.col}
-      data-ball-move-preview={
-        showBallMovePreview ? movePreview?.ballWillMove ?? undefined : undefined
-      }
       aria-label={
         interactive
-          ? `Escape 棋盘。${goalDescription}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列${movementDescription}。`
+          ? `Escape 棋盘。${goalDescription}。方向键选择交点，回车落桩。当前交点 ${(activeFocus?.row ?? 0) + 1} 行 ${(activeFocus?.col ?? 0) + 1} 列。`
           : `Escape 棋盘。${goalDescription}。`
       }
       onKeyDown={handleKeyboard}
@@ -217,8 +196,7 @@ export function BoardCanvas({
         <BoardNeighborDistances
           ball={distanceHints.origin ?? state.ball}
           boardSize={state.size}
-          current={distanceHints.current}
-          after={distanceHints.after}
+          distances={distanceHints.distances}
           highlightShortest={highlightShortestDistances}
         />
       )}

@@ -74,14 +74,13 @@ export function TutorialScreen({ onHome, onStartMatch }: TutorialScreenProps) {
           distanceHints={
             lesson.showDistances
               ? {
-                  current: tutorialPreview?.before ?? getNeighborEscapeDistances(state),
-                  after: tutorialPreview?.afterPlacement ?? null,
+                  distances:
+                    tutorialPreview?.afterPlacement ?? getNeighborEscapeDistances(state),
                   origin: lesson.initialState.ball,
                 }
               : null
           }
           highlightShortestDistances={lesson.showDistances}
-          showBallMovePreview={lesson.label === "推动球" && !completed}
           interactive={!completed}
           canSelect={(move) =>
             !completed && move.row === lesson.target.row && move.col === lesson.target.col

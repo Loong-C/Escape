@@ -146,8 +146,7 @@ export function MatchScreen({
   const distanceHints =
     difficulty === "easy"
       ? {
-          current: movePreview?.before ?? currentDistances,
-          after: movePreview?.afterPlacement ?? null,
+          distances: movePreview?.afterPlacement ?? currentDistances,
         }
       : null;
 
@@ -211,7 +210,7 @@ export function MatchScreen({
           focusedMove={focusedMove}
           goalPlayer={state.turn}
           distanceHints={distanceHints}
-          showBallMovePreview={difficulty === "easy"}
+          highlightShortestDistances={difficulty === "easy"}
           interactive={humanTurn && !aiThinking}
           canSelect={(move) => humanTurn && !aiThinking && getLegalMove(state, move) !== null}
           onHover={handleHover}

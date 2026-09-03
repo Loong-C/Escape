@@ -195,7 +195,9 @@ export function chooseMoveWithSearch(
   const random = new SeededRandom(options.seed ?? state.moveNumber * 65_537 + 97);
   const timeBudget = options.timeBudgetMs ?? 12_000;
   const maxDepth = options.maxDepth ?? 5;
-  const rootRanked = rankMoves(state, model, random, state.size < 7 ? 64 : 144);
+  // The root must contain every legal vertex so immediate wins and mandatory
+  // defensive moves cannot disappear when the standard board grows beyond 11x11.
+  const rootRanked = rankMoves(state, model, random, (state.size + 1) ** 2);
   const immediate = rootRanked.find((entry) => entry.score >= 1.5);
   if (immediate) {
     return {

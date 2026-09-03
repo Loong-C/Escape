@@ -9,8 +9,7 @@ import {
 interface BoardNeighborDistancesProps {
   ball: Cell;
   boardSize: number;
-  current: DirectionalDistances;
-  after: DirectionalDistances | null;
+  distances: DirectionalDistances;
   highlightShortest?: boolean;
 }
 
@@ -50,47 +49,32 @@ function positionForDirection(
 export function BoardNeighborDistances({
   ball,
   boardSize,
-  current,
-  after,
+  distances,
   highlightShortest = false,
 }: BoardNeighborDistancesProps) {
-  const displayed = after ?? current;
-  const finiteDistances = DIRECTIONS.map((direction) => displayed[direction]).filter(
-    Number.isFinite,
+  const shortest = Math.min(...DIRECTIONS.map((direction) => distances[direction]));
+  const shortestDirections = DIRECTIONS.filter(
+    (direction) => distances[direction] === shortest,
   );
-  const shortest = finiteDistances.length > 0 ? Math.min(...finiteDistances) : null;
-  const announcement = DIRECTIONS.map((direction) => {
-    const label = DIRECTION_LABELS[direction];
-    const currentText = formatDistance(current[direction]);
-    if (!after || after[direction] === current[direction]) {
-      return `${label} ${currentText} 步`;
-    }
-    return `${label}从 ${currentText} 步变为 ${formatDistance(after[direction])} 步`;
-  }).join("；");
+  const uniqueShortest = shortestDirections.length === 1 ? shortestDirections[0] : null;
+  const announcement = DIRECTIONS.map(
+    (direction) => `${DIRECTION_LABELS[direction]} ${formatDistance(distances[direction])} 步`,
+  ).join("；");
 
   return (
     <div className="neighbor-distances" aria-live="polite" aria-atomic="true">
       <span className="visually-hidden">{announcement}</span>
       {DIRECTIONS.map((direction) => {
-        const next = after?.[direction] ?? null;
-        const changed = next !== null && next !== current[direction];
-        const isShortest =
-          highlightShortest && shortest !== null && displayed[direction] === shortest;
+        const isShortest = highlightShortest && direction === uniqueShortest;
         return (
           <div
             className={`neighbor-distance${isShortest ? " is-shortest" : ""}`}
             data-direction={direction}
-            data-changed={changed ? "true" : "false"}
             key={direction}
             style={positionForDirection(ball, boardSize, direction)}
             aria-hidden="true"
           >
-            <span className={changed ? "neighbor-distance__previous" : undefined}>
-              {formatDistance(current[direction])}
-            </span>
-            {changed && next !== null && (
-              <strong className="is-changed">{formatDistance(next)}</strong>
-            )}
+            {formatDistance(distances[direction])}
           </div>
         );
       })}

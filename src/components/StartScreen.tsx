@@ -45,8 +45,8 @@ export function StartScreen({
           />
           <p className="option-note">
             {difficulty === "easy"
-              ? "显示球四个相邻位置的逃生长度与下一步预览。"
-              : "不显示距离与移动预览；人机模式的 AI 强度与简易模式相同。"}
+              ? "显示球四个相邻位置的逃生长度，并标出唯一最小值。"
+              : "隐藏逃生长度提示；人机模式的 AI 强度与简易模式相同。"}
           </p>
         </section>
 

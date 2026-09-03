@@ -12,6 +12,7 @@ import {
   isPassageBlocked,
   previewMove,
   setPost,
+  STANDARD_BOARD_SIZE,
   vertexIndex,
   type GameState,
   type Player,
@@ -43,15 +44,16 @@ function rightCorridorState(ballCol = 2): GameState {
 }
 
 describe("Escape rules engine", () => {
-  it("starts an 11x11 board in the geometric center", () => {
+  it("starts a 17x17 board in the geometric center", () => {
     const state = createGame();
-    expect(state.ball).toEqual({ row: 5, col: 5 });
-    expect(state.posts).toHaveLength(144);
+    expect(state.size).toBe(STANDARD_BOARD_SIZE);
+    expect(state.ball).toEqual({ row: 8, col: 8 });
+    expect(state.posts).toHaveLength(324);
     expect(getDirectionalExitDistances(state)).toEqual({
-      up: 6,
-      right: 6,
-      down: 6,
-      left: 6,
+      up: 9,
+      right: 9,
+      down: 9,
+      left: 9,
     });
   });
 

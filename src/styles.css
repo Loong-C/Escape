@@ -283,46 +283,20 @@ button:disabled {
 
 .neighbor-distance {
   position: absolute;
-  display: inline-flex;
-  min-width: 30px;
-  min-height: 23px;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 2px 4px;
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
   color: var(--text);
-  background: color-mix(in srgb, var(--rail) 92%, transparent);
-  font-size: clamp(10px, 1.1vw, 13px);
-  font-weight: 590;
+  font-size: clamp(11px, 1.15vw, 14px);
+  font-weight: 650;
   line-height: 1;
-  box-shadow: 0 2px 7px rgb(13 18 28 / 0.08);
+  text-shadow:
+    0 0 3px var(--surface),
+    0 0 6px var(--surface);
   transform: translate(-50%, -50%);
-  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
-}
-
-.neighbor-distance__previous {
-  color: var(--subtle);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
-.neighbor-distance strong {
-  font: inherit;
-}
-
-.neighbor-distance strong.is-changed {
-  color: var(--accent);
-  font-weight: 720;
+  transition: color 120ms ease;
 }
 
 .neighbor-distance.is-shortest {
-  border-color: var(--accent);
   color: var(--accent);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent),
-    0 3px 12px color-mix(in srgb, var(--accent) 24%, transparent);
+  font-weight: 800;
 }
 
 .side-rail {
@@ -922,10 +896,6 @@ button:disabled {
   }
 
   .neighbor-distance {
-    min-width: 28px;
-    min-height: 22px;
-    gap: 4px;
-    padding: 1px 4px;
     font-size: 10px;
   }
 
